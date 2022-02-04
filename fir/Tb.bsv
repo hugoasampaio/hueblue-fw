@@ -9,25 +9,20 @@ module mkTb (Empty);
     Reg #(Bool) first <- mkReg(True); 
     Reg #(Int#(8)) loop <- mkReg(0);
     Stmt filter = seq
-        if (first == False)
+        while (loop < 43) seq
+            loop <= loop+1;
+            if (first == False)
             fir.add_sample(0);
     
-        if (first == True)
-            fir.add_sample(4095);
-            first <= False;
+            if (first == True)
+                fir.add_sample(4095);
+                first <= False;
         
-        $display(" %d ", fir.get_value);
+            $display("%d", fir.get_value);
+        endseq
     endseq;
     
-    FSM iter <- mkFSM(filter);
-    
-    rule convolution;
-        while (loop < 43) begin
-            iter.start;
-            loop <= loop+1;
-        end
-        $finish(0);
-    endrule
+    mkAutoFSM(filter);
     
 endmodule: mkTb
 endpackage: Tb
