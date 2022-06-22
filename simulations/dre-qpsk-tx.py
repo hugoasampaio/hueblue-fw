@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 
 num_symbols = 10000
-sps = 8
+sps = 2
 
 bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -12,33 +12,33 @@ for bit in bits:
     pulse = np.zeros(sps)
     pulse[0] = bit*2-1 # set the first value to either a 1 or -1
     x = np.concatenate((x, pulse)) # add the 8 samples to the signal
-#x = np.zeros(sps*num_symbols)
-#x[0] = 1
 
 # Create our raised-cosine filter
-num_taps = 41
+num_taps = 43
 beta = 0.35
 Ts = sps # Assume sample rate is 1 Hz, so sample period is 1, so *symbol* period is 8
 t = np.arange(-21, 22) # remember it's not inclusive of final number
 h = np.sinc(t/Ts) * np.cos(np.pi*beta*t/Ts) / (1 - (2*beta*t/Ts)**2)
-#h_integer = h*4095
-#h_integer = h_integer.astype(int)
-#h_error = (h*4096) - h_integer
-#print(h_integer)
-#print(h_error)
-#print(np.mean(h_error), np.std(h_error), np.average(h_error))
-#plt.figure(1)
-#plt.plot(t, h, '.')
-#plt.grid(True)
-#plt.show()
+h_int = h * (4096)
+h_int = h_int.astype(int)
 
+x = x.astype(int)
+
+x_sum = np.array([])
 # Filter our signal, in order to apply the pulse shaping
-x_shaped = np.convolve(x, h)
-#plt.figure(2)
-#plt.plot(x_shaped, '.-')
-#for i in range(num_symbols):
-#    plt.plot([i*sps+num_taps//2+1,i*sps+num_taps//2+1], [min(x_shaped), max(x_shaped)])
-#plt.grid(True)
-#plt.show()
-#print(np.mean(x_shaped), np.std(x_shaped), np.average(x_shaped))
+#x_shaped = np.convolve(x, h_int)
 
+for j in range(num_symbols - num_taps):
+    x_part = x[j : j + num_taps]
+    x_part = np.flip(x_part)
+    value = 0
+    for k in range(num_taps):
+        value = value + (x_part[k] * h[k])
+        x_sum = np.concatenate((x_sum, [value])) 
+
+#hist, bin_edges = np.histogram(x_shaped, bins = 20)
+#print( hist, bin_edges)
+print( min(x_sum), max(x_sum))
+plt.hist(x_sum, bins = 50)
+plt.grid(True)
+plt.show()
