@@ -9,18 +9,18 @@ fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-num_symbols = int(500*fsamples)
+num_symbols = int(30*fsamples)
 
-bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
+in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
 x = np.array([])
-for bit in bits:
+for bit in in_bits:
     pulse = np.zeros(sps)
     pulse[0] = bit*2-1 # set the first value to either a 1 or -1
     x = np.concatenate((x, pulse)) # add the 8 samples to the signal
 
-#plt.figure(1)
-#plt.plot(x, '.-')
+plt.figure(1)
+plt.plot(in_bits, '.-')
 
 num_taps = 42
 beta = 0.50
@@ -31,6 +31,10 @@ tx_signal = np.convolve(x, hsrrc)
 #plt.figure(2)
 #plt.plot(hsrrc,'.-')
 
+#AWGN 
+#n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
+#tx_signal = tx_signal + n/100
+
 #delay pre RX
 delay = 0.1 # fractional delay, in samples
 N = 21 # number of taps
@@ -39,10 +43,6 @@ h = np.sinc(n - delay) # calc filter taps
 h *= np.hamming(N) # window the filter to make sure it decays to 0 on both sides
 h /= np.sum(h) # normalize to get unity gain, we don't want to change the amplitude/power
 tx_delayed_signal = np.convolve(tx_signal, h) # apply filter
-
-#AWGN 
-n = (np.random.randn(len(tx_delayed_signal)) + 1j*np.random.randn(len(tx_delayed_signal)))/np.sqrt(2) # AWGN with unity power
-tx_delayed_signal = tx_delayed_signal + n/100
 
 #plt.figure(3)
 #plt.plot(np.real(n/100),np.imag(n/100),'.')
@@ -58,7 +58,7 @@ tx_delayed_signal = tx_delayed_signal + n/100
 rx_signal = np.convolve(tx_delayed_signal, hsrrc)
 
 #rx - step 2: freq offset from different LO
-fo = fsamples*0.3 #freq offset in %
+fo = fsamples*0.28 #freq offset in %
 t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
 rx_fo_delay = rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
 
@@ -77,7 +77,7 @@ for rx in rx_fo_delay:
         err_ += (rx * rx.conjugate())
     else:
         err_ += (rx * last_rx.conjugate())
-    if sum > 8*sps:
+    if sum > 16*sps:
         error = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         freq_error_log.append(error)
         sum = 0
@@ -89,12 +89,12 @@ freq_fix = fsamples*freq_error_mean
 t = np.arange(0, Tsample*len(rx_fo_delay), Tsample) # create time vector
 rx_signal_freq_coarse = rx_fo_delay * np.exp(-1j*2*np.pi*freq_fix*t) # perform freq shift
 
-plt.figure(7)
-plt.plot( freq_error_log, '.-')
+#plt.figure(7)
+#plt.plot( freq_error_log, '.-')
 
-plt.figure(8)
-plt.plot( rx_signal_freq_coarse.real, '.-')
-plt.plot( rx_signal_freq_coarse.imag, '.-')
+#plt.figure(8)
+#plt.plot( rx_signal_freq_coarse.real, '.-')
+#plt.plot( rx_signal_freq_coarse.imag, '.-')
 
 #time synch: Muller and Mueller
 mu = 0 # initial estimate of phase of sample
@@ -117,9 +117,9 @@ while i_out < len(rx_signal_freq_coarse) and i_in+16 < len(rx_signal_freq_coarse
 out = out[2:i_out] # remove the first two, and anything after i_out (that was never filled out)
 time_synched_signal = out # only include this line if you want to connect this code snippet with the Costas Loop later on
 
-plt.figure(9)
-plt.plot(time_synched_signal.real, '.-')
-plt.plot(time_synched_signal.imag, '.-')
+#plt.figure(9)
+#plt.plot(time_synched_signal.real, '.-')
+#plt.plot(time_synched_signal.imag, '.-')
 
 #fine freq sync: costas loop
 N = len(time_synched_signal)
@@ -148,11 +148,22 @@ for i in range(N):
         phase += 2*np.pi
 
 # Plot freq over time to see how long it takes to hit the right offset
-plt.figure(10)
-plt.plot(freq_log,'.-')
+#plt.figure(10)
+#plt.plot(freq_log,'.-')
 
-plt.figure(11)
-plt.plot(out.real, '.-')
-plt.plot(out.imag, '.-')
+#plt.figure(11)
+#plt.plot(out.real, '.-')
+#plt.plot(out.imag, '.-')
+
+#decode
+out_bits = []
+for i in time_synched_signal:
+    if i.real > 0:
+        out_bits.append(1);
+    else:
+        out_bits.append(0);
+
+plt.figure(12)
+plt.plot(out_bits, '.-')
 
 plt.show()
