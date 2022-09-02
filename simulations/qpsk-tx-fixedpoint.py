@@ -55,7 +55,7 @@ class qpsk_tx:
 
     def convolve(self):
         self.tx_signal = np.convolve(self.x, self.hsrrc)
-        self.tx_signal_fp = np.convolve(self.x_fp, self.hsrrc_fp)
+        self.tx_signal_fp = step_convolve(self.x_fp, self.hsrrc_fp)
 
     def sqnr(self): 
         quant_err = self.tx_signal - self.tx_signal_fp
@@ -74,25 +74,25 @@ class qpsk_tx:
 LIMIT_SQNR = 40.0
 step_sqnr = 0.0
 m = 2
-n = 32
+n = 8
 sim = qpsk_tx(m,n)
-#sim.convolve()
-#sim.sqnr()
-#plt.figure(1)
-#plt.plot(sim.tx_signal, '.-')
-#plt.plot(sim.tx_signal_fp, '.')
+sim.convolve()
+sim.sqnr()
+plt.figure(1)
+plt.plot(sim.tx_signal, '.-')
+plt.plot(sim.tx_signal_fp, '.')
 #plt.figure(2)
 #plt.plot(sim.tx_signal_fp, '.-')
 #plt.plot(sim.tx_signal_fp_convolve, '.')
-#plt.show()
-while(1):
-    sim.convolve()
-    sim_sqnr = sim.sqnr()
-    if (sim_sqnr < LIMIT_SQNR):
-        print(sim_sqnr, m, n)
-        break
-    step_sqnr = sim_sqnr
-    n -= 1
-    for i in range(len(sim.hsrrc_fp)):
-        sim.hsrrc_fp[i].resize(m, n)
-print(step_sqnr, m, n+1)
+plt.show()
+#while(1):
+#    sim.convolve()
+#    sim_sqnr = sim.sqnr()
+#    if (sim_sqnr < LIMIT_SQNR):
+#        print(sim_sqnr, m, n)
+#        break
+#    step_sqnr = sim_sqnr
+#    n -= 1
+#    for i in range(len(sim.hsrrc_fp)):
+#        sim.hsrrc_fp[i].resize(m, n)
+#print(step_sqnr, m, n+1)
