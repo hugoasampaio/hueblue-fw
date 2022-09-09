@@ -1,14 +1,17 @@
 import math
+import numpy as np
 from fixedpoint import FixedPoint as fp
 
 class Complex_fxp:
 	real=None
 	imag=None
-	m = 24
+	m = 32
 	n = 32
-	def __init__(self, real_value=0, imag_value=0):
-		self.real = fp(real_value, signed=True, m = self.m, n=self.n)
-		self.imag = fp(imag_value, signed=True, m = self.m, n=self.n)
+	def __init__(self, real_value=0.0, imag_value=0.0, m_in=32, n_in=32):
+		self.real = fp(real_value, signed=True, m = m_in, n=n_in, rounding ='convergent')
+		self.imag = fp(imag_value, signed=True, m = m_in, n=n_in, rounding ='convergent')
+		self.m=m_in
+		self.n=n_in
 	
 	@classmethod
 	def from_complex(cls, complex):
@@ -27,7 +30,7 @@ class Complex_fxp:
 		self.n = max(self.real.n, self.imag.n)
 
 	def conjugate(self):
-		return Complex_fxp(self.real, -self.imag)
+		return Complex_fxp.from_complex(complex(self).conjugate())
         
 	def __repr__(self):
 		return f"Complex_fxp({float(self.real)}, {float(self.imag)}, Q{self.m}.{self.n})"
@@ -43,12 +46,12 @@ class Complex_fxp:
 	def __sub__(self, other):
 		ret = complex(self) - complex(other)
 		return Complex_fxp.from_complex(ret)
+
+	def __rsub__(self, other):
+		ret = complex(self) - complex(other)
+		return Complex_fxp.from_complex(ret)
 	
 	def __mul__(self, other):
-		if self is None:
-			print("self is nonetype")
-		if other is None:
-			print("other is nonetype")
 		ret = complex(self) * complex(other)
 		return Complex_fxp.from_complex(ret)
 
@@ -57,6 +60,10 @@ class Complex_fxp:
 		return Complex_fxp.from_complex(ret)
 
 	def __truediv__(self, other):
+		ret = complex(self) / complex(other)
+		return Complex_fxp.from_complex(ret)
+	
+	def __rtruediv__(self, other):
 		ret = complex(self) / complex(other)
 		return Complex_fxp.from_complex(ret)
 
@@ -78,4 +85,10 @@ class Complex_fxp:
 
 	def __eq__(self, other):
 		return(self.real == other.real and self.imag == other.imag)
+
+	def __abs__(self):
+		return np.sqrt(float(self.real**2+self.imag**2))
+
+	def __gt__(self, other):
+		return np.abs(self) > np.abs(other)
 
