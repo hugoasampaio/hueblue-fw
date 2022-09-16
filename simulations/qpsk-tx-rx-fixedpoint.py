@@ -63,7 +63,7 @@ class qpsk_tx:
             pulse[0] = bit*2-1 # set the first value to either a 1 or -1
             self.x = np.concatenate((self.x, pulse)) # add the 8 samples to the signal
 
-        _, self.hsrrc = filter.rrcosfilter(srrc_taps, beta, self.Tsymbol, self.fsamples)
+        _, self.hsrrc = filter.rcosfilter(srrc_taps, beta, self.Tsymbol, self.fsamples)
 
         for a in self.hsrrc:
             self.hsrrc_fp.append(cfxp(a,0.0, m, n))
@@ -87,15 +87,11 @@ class qpsk_tx:
         self.tx_signal_fp = np.convolve(self.tx_signal_fp, h) # apply filter
     
     def recv_signals(self):
-        #rx - step 1: matched filter
-        self.rx_signal = np.convolve(self.tx_signal, self.hsrrc)
-        self.rx_signal_fp = step_convolve(self.tx_signal_fp, self.hsrrc_fp)
-
-        #rx - step 2: freq offset from different LO
+        #rx - step 1: freq offset from different LO
         fo = self.fsamples*FREQ_ERROR #freq offset in %
-        t = np.arange(0, self.Tsample*len(self.rx_signal), self.Tsample) # create time vector
-        self.rx_signal = self.rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
-        self.rx_signal_fp = self.rx_signal_fp * np.exp(1j*2*np.pi*fo*t)
+        t = np.arange(0, self.Tsample*len(self.tx_signal), self.Tsample) # create time vector
+        self.rx_signal = self.tx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
+        self.rx_signal_fp = self.tx_signal_fp * np.exp(1j*2*np.pi*fo*t)
 
     def feq(self) -> list:
         freq_error_log = []
