@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import commpy.filters as filter
 
-sps = 4
+sps = 8
 fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-num_symbols = int(30*fsamples)
+num_symbols = int(50*fsamples)
 
 in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -24,16 +24,17 @@ plt.plot(in_bits, '.-')
 
 num_taps = 42
 beta = 0.50
-_, hsrrc = filter.rrcosfilter(num_taps, beta, Tsymbol, fsamples)
+_, hsrrc = filter.rcosfilter(num_taps, beta, Tsymbol, fsamples)
 
 tx_signal = np.convolve(x, hsrrc)
 
 #plt.figure(2)
-#plt.plot(hsrrc,'.-')
+#plt.plot(tx_signal.real,'.-')
+#plt.plot(tx_signal.imag,'.-')
 
 #AWGN 
-#n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
-#tx_signal = tx_signal + n/100
+n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
+tx_signal = tx_signal + n/3
 
 #delay pre RX
 delay = 0.1 # fractional delay, in samples
@@ -50,19 +51,23 @@ tx_delayed_signal = np.convolve(tx_signal, h) # apply filter
 #plt.axis([-2, 2, -2, 2])
 
 #plt.figure(4)
-#plt.plot( tx_delayed_signal.real, tx_delayed_signal.imag, '.-')
+#plt.plot( tx_delayed_signal.real, '.-')
 #plt.plot( tx_delayed_signal.imag, '.-')
 
 
 #rx - step 1: matched filter
-rx_signal = np.convolve(tx_delayed_signal, hsrrc)
+#rx_signal = np.convolve(tx_delayed_signal, hsrrc)
+rx_signal = tx_delayed_signal
+#plt.figure(5)
+#plt.plot(rx_signal.real, '.-')
+#plt.plot(rx_signal.imag, '.-')
 
 #rx - step 2: freq offset from different LO
 fo = fsamples*0.28 #freq offset in %
 t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
-rx_fo_delay = rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
+rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
 
-#plt.figure(5)
+#plt.figure(6)
 #plt.plot(rx_fo_delay.real, '.-')
 #plt.plot(rx_fo_delay.imag, '.-')
 
@@ -87,7 +92,7 @@ freq_error_mean = np.array(freq_error_log).mean()
 print(freq_error_mean)
 freq_fix = fsamples*freq_error_mean
 t = np.arange(0, Tsample*len(rx_fo_delay), Tsample) # create time vector
-rx_signal_freq_coarse = rx_fo_delay * np.exp(-1j*2*np.pi*freq_fix*t) # perform freq shift
+rx_signal_downsampled = rx_fo_delay * np.exp(-1j*2*np.pi*freq_fix*t) # perform freq shift
 
 #plt.figure(7)
 #plt.plot( freq_error_log, '.-')
@@ -96,14 +101,28 @@ rx_signal_freq_coarse = rx_fo_delay * np.exp(-1j*2*np.pi*freq_fix*t) # perform f
 #plt.plot( rx_signal_freq_coarse.real, '.-')
 #plt.plot( rx_signal_freq_coarse.imag, '.-')
 
+#downsample
+#rx_signal_downsampled = []
+#for index in range(0, len(rx_signal_freq_coarse)):
+#    rx_signal_downsampled.append(rx_signal_freq_coarse[index])
+
+#rx_signal_downsampled = np.array(rx_signal_downsampled, dtype=complex)
+
+#plt.figure(9)
+#plt.plot( rx_signal_downsampled.real, '.-')
+#plt.plot( rx_signal_downsampled.imag, '.-')
+
 #time synch: Muller and Mueller
 mu = 0 # initial estimate of phase of sample
-out = np.zeros(len(rx_signal_freq_coarse) + 10, dtype=complex)
-out_rail = np.zeros(len(rx_signal_freq_coarse) + 10, dtype=complex) # stores values, each iteration we need the previous 2 values plus current value
+out = np.zeros(len(rx_signal_downsampled) + 10, dtype=complex)
+out_rail = np.zeros(len(rx_signal_downsampled) + 10, dtype=complex) # stores values, each iteration we need the previous 2 values plus current value
 i_in = 0 # input samples index
 i_out = 2 # output index (let first two outputs be 0)
-samples_interpolated = signal.resample_poly(rx_signal_freq_coarse, 16, 1)
-while i_out < len(rx_signal_freq_coarse) and i_in+16 < len(rx_signal_freq_coarse):
+samples_interpolated = signal.resample_poly(rx_signal_downsampled, 16, 1)
+#plt.figure(9)
+#plt.plot(samples_interpolated.real, '.-')
+#plt.plot(samples_interpolated.imag, '.-')
+while i_out < len(rx_signal_downsampled) and i_in+16 < len(rx_signal_downsampled):
     #out[i_out] = tx_delayed_signal[i_in + int(mu)] # grab what we think is the "best" sample
     out[i_out] = samples_interpolated[i_in*16 + int(mu*16)]
     out_rail[i_out] = int(np.real(out[i_out]) > 0) + 1j*int(np.imag(out[i_out]) > 0)
@@ -117,9 +136,9 @@ while i_out < len(rx_signal_freq_coarse) and i_in+16 < len(rx_signal_freq_coarse
 out = out[2:i_out] # remove the first two, and anything after i_out (that was never filled out)
 time_synched_signal = out # only include this line if you want to connect this code snippet with the Costas Loop later on
 
-#plt.figure(9)
-#plt.plot(time_synched_signal.real, '.-')
-#plt.plot(time_synched_signal.imag, '.-')
+plt.figure(10)
+plt.plot(time_synched_signal.real, '.-')
+plt.plot(time_synched_signal.imag, '.-')
 
 #fine freq sync: costas loop
 N = len(time_synched_signal)
@@ -148,22 +167,22 @@ for i in range(N):
         phase += 2*np.pi
 
 # Plot freq over time to see how long it takes to hit the right offset
-#plt.figure(10)
+#plt.figure(11)
 #plt.plot(freq_log,'.-')
 
-#plt.figure(11)
-#plt.plot(out.real, '.-')
-#plt.plot(out.imag, '.-')
+plt.figure(12)
+plt.plot(out.real, '.-')
+plt.plot(out.imag, '.-')
 
 #decode
 out_bits = []
-for i in time_synched_signal:
+for i in out:
     if i.real > 0:
         out_bits.append(1);
     else:
         out_bits.append(0);
 
-plt.figure(12)
+plt.figure(13)
 plt.plot(out_bits, '.-')
 
 plt.show()
