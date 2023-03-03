@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
 
-num_symbols = 10000
-sps = 2
+num_symbols = 1000
+sps = 16
 
 bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -39,6 +39,6 @@ for j in range(num_symbols - num_taps):
 #hist, bin_edges = np.histogram(x_shaped, bins = 20)
 #print( hist, bin_edges)
 print( min(x_sum), max(x_sum))
-plt.hist(x_sum, bins = 50)
+plt.hist(x_sum, bins = 51)
 plt.grid(True)
 plt.show()

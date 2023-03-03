@@ -9,7 +9,7 @@ fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-num_symbols = int(50*fsamples)
+num_symbols = int(500*fsamples)
 
 in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -73,21 +73,32 @@ rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
 
 #rx - step 3: delay 'n' multiply coarse freq error estimation
 freq_error_log = []
+err_log = []
+conj_log = []
 last_rx = complex(0,0)
 err_ = complex(0,0)
 sum = 0
 for rx in rx_fo_delay:
     sum += 1
     if sum == 0:
-        err_ += (rx * rx.conjugate())
+        conj = (rx * rx.conjugate())
+        err_ += conj
+        err_log.append(err_)
+        conj_log.append(conj)
     else:
-        err_ += (rx * last_rx.conjugate())
+        conj = (rx * last_rx.conjugate())
+        err_ += conj
+        conj_log.append(conj)
+        err_log.append(err_)
     if sum > 16*sps:
         error = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         freq_error_log.append(error)
         sum = 0
     last_rx = rx
 #apply freq error fix
+print("err_ min:", min(err_log), "\terr_ max:", max(err_log))
+print("conj min:", min(conj_log), "\tconj max:", max(conj_log))
+print("freq error min:", min(freq_error_log), "\tmax:", max(freq_error_log))
 freq_error_mean = np.array(freq_error_log).mean()
 print(freq_error_mean)
 freq_fix = fsamples*freq_error_mean
