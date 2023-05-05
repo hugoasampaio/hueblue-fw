@@ -1,19 +1,19 @@
 package FIRcoeff;
 import FixedPoint::*;
 
-//typedef FixedPoint#(3, 32) FIRtap_Type;
+typedef FixedPoint#(3, 16) FIRtap_Type;
 //typedef Real FIRtap_Type;
-typedef Int#(16) FIRtap_Type;
-Integer n_TAPS = 43;
+//typedef Int#(16) FIRtap_Type;
+Integer nTAPS = 43;
 
-
+/*
 FIRtap_Type coeff[n_TAPS] ={186, 233, 248, 217, 134, 0, -173, -364, -540, -665, 
 -700, -613, -382, 0, 521, 1151, 1842, 2533, 3159, 3660, 3983, 4095, 3983, 3660,
 3159, 2533, 1842, 1151, 521, 0, -382, -613, -700, -665, -540, -364, -173, 0,  
 134,  217,  248,  233, 186};
+*/
 
-/*
-FIRtap_Type coeff[n_TAPS] = {
+FIRtap_Type coeff[nTAPS] = {
  -0.01897049, 
  -0.01842133, 
  -0.00954316,  
@@ -57,5 +57,5 @@ FIRtap_Type coeff[n_TAPS] = {
   0.00624239, 
  -0.00954316,
  -0.01842133};
-*/
+
 endpackage: FIRcoeff

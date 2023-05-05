@@ -12,7 +12,6 @@ module mkTb (Empty);
     Reg#(Int#(8)) loop <- mkReg(0);
     Reg#(Sample_Type) result <-mkReg(0);
     
-    
     Stmt filter = seq
         while (loop < 43) seq
             loop <= loop+1;
@@ -27,9 +26,10 @@ module mkTb (Empty);
             let r <-  fir.get_value;   
             result <= r;
             endaction
-            //$display("%d.%d", fxptGetInt(result), fxptGetFrac(result));
-            //fxptGetInt(result.img), fxptGetFrac(result.img));
-            $display(result);
+            
+            fxptWrite(8,result);
+            $display("  ");
+            
         endseq
     endseq;
     

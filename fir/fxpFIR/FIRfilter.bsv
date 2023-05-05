@@ -29,9 +29,8 @@ module mkFIRfilter (FIRfilter_type);
         
         samples[0] <= newSample.first;
         newSample.deq;
-        for (n<= 0; n < 42; n<=n+1) seq
+        for (n<= 0; n < 43; n<=n+1) seq
             sum <= sum + (samples[n] * coeff[n]);
-            //$display("%d.%d", fxptGetInt(coeff[n]), fxptGetFrac(coeff[n]));
         endseq
         acc.enq(sum);
         sum <= 0;
