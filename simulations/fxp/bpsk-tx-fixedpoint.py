@@ -63,7 +63,7 @@ class qpsk_tx:
         #print(quant_err)
         #print(type(quant_err[0]))
         p_noise = float(np.sum(quant_err**2)) / len(quant_err)
-        p_x = np.sum(self.x**2) / len(self.x)
+        p_x = np.sum(self.tx_signal**2) / len(self.tx_signal)
         sqnr = 10*np.log10(p_x/p_noise)
         #print(p_noise, p_x)
         return sqnr
