@@ -6,6 +6,7 @@ import Complex::*;
 import FixedPoint::*;
 import Vector::*;
 import FIRcoeff::*;
+import Limit::*;
 
 (* synthesize *)
 module mkTb (Empty);
@@ -18,7 +19,6 @@ module mkTb (Empty);
     
     Stmt filter = seq
         for (n<= 0; n < 10; n<=n+1) seq
-            fir.set_fwl(n);
             first <= True;
             while (loop < 43) seq
                 if (first == False) 

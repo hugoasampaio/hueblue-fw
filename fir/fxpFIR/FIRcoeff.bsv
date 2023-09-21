@@ -12,7 +12,6 @@ function FIRPreciseTap_Type energy_filter();
     FIRPreciseTap_Type acc = 0.0;
     for (Integer n = 0; n < 43; n = n+1)
         acc = acc + (coeff_precise[n] * coeff_precise[n]);
-    
     return acc;
 
 endfunction
