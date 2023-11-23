@@ -1,6 +1,5 @@
 package Limit;
 
-/*
 import Complex::*;
 import Vector::*;
 import FIFO::*;
@@ -27,5 +26,5 @@ module mkLimit (Limited_type);
     endmethod
 
 endmodule
-*/
+
 endpackage: Limit
