@@ -1,5 +1,6 @@
 package Operations;
 
+import ModuleContextCore::*;
 import FixedPoint::*;
 import StmtFSM::*;
 import FIFO::*;
@@ -7,27 +8,34 @@ import CBus::*;
 
 typedef 3   CBADDRSIZE; //size of configuration address bus to decode
 typedef 1   CBDATASIZE; //size of configuration data bus
-typedef FixedPoint#(3, 1)   Sample_Type;
+typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)       LimitedOps#(type j);
+typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCBus;
 
-interface Operations;
-    method Action putOperands(Sample_Type a, Sample_Type b);
-    method ActionValue#(Sample_Type) getResult();
+interface Operations#(type i, type frac);
+    method Action putOperands(FixedPoint#(i, frac) a, FixedPoint#(i, frac) b);
+    method ActionValue#(FixedPoint#(i, frac)) getResult();
 endinterface
 
+/*
+//binding Cbus databus size to fractional size
+//binding Address to Operation instanciation
 (* synthesize *)
-module mkPlusSynth(IWithCBus#(CBus#(CBADDRSIZE, CBDATASIZE), Operations));
-    let ifc();
-    exposeCBusIFC#(mkPlus) _temp(ifc);
-    return (ifc);
+module [Module] mkPlusSynth(IWithCBus#(LimitedCBus, Operations#(3, CBDATASIZE)));
+    let ifc <- exposeCBusIFC(mkPlus(3'd5));
+    return ifc;
 endmodule
+*/
 
-module [ModWithCBus#(CBADDRSIZE, CBDATASIZE)] mkPlus(Operations)
-    provisos(Add#(1, k, CBDATASIZE));
+module [LimitedOps] mkPlus#(Bit#(CBADDRSIZE) addr) (Operations#(i, frac))
+    provisos(Add#(frac, k, CBDATASIZE),
+    Arith#(FixedPoint::FixedPoint#(i, frac)));
 
-    Reg#(Bit#(1)) limit <- mkCBRegRW(CRAddr{a: 3'd5, o:0}, 0);
-    FIFO#(Sample_Type) sum <- mkFIFO;
-    FIFO#(Sample_Type) out <- mkFIFO;
-    Reg#(Sample_Type) ret <- mkReg(0);
+    //Bit#(CBADDRSIZE) addr_fix = fromInteger (valueOf (addr));
+
+    Reg#(Bit#(frac)) limit <- mkCBRegRW(CRAddr{a: addr, o:0}, 0);
+    FIFO#(FixedPoint#(i, frac)) sum <- mkFIFO;
+    FIFO#(FixedPoint#(i, frac)) out <- mkFIFO;
+    Reg#(FixedPoint#(i, frac)) ret <- mkReg(0);
 
     Stmt applyLimit = seq
         ret.i <= sum.first.i;
@@ -37,16 +45,17 @@ module [ModWithCBus#(CBADDRSIZE, CBDATASIZE)] mkPlus(Operations)
     endseq;
     FSM limitFSM <- mkFSM(applyLimit);
 
-    method Action putOperands(Sample_Type a, Sample_Type b);
+    method Action putOperands(FixedPoint#(i, frac) a, FixedPoint#(i, frac) b);
         sum.enq(a+b);
         limitFSM.start;
     endmethod
 
-    method ActionValue#(Sample_Type) getResult();
+    method ActionValue#(FixedPoint#(i, frac)) getResult();
         let x = out.first;
         out.deq;
         return x;
     endmethod
 
 endmodule
+
 endpackage
