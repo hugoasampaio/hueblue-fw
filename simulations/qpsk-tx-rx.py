@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import commpy.filters as filter
 
-sps = 8
+sps = 4 #samples per symbol
 fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-num_symbols = int(500*fsamples)
+num_symbols = int(10*fsamples)
 
 in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -33,8 +33,8 @@ tx_signal = np.convolve(x, hsrrc)
 #plt.plot(tx_signal.imag,'.-')
 
 #AWGN 
-n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
-tx_signal = tx_signal + n/3
+#n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
+#tx_signal = tx_signal + n/3
 
 #delay pre RX
 delay = 0.1 # fractional delay, in samples
@@ -90,7 +90,9 @@ for rx in rx_fo_delay:
         err_ += conj
         conj_log.append(conj)
         err_log.append(err_)
+    print("coarseFreq.addSample(cmplx({:.8f}".format(rx.real), ",", "{:.8f}));".format(rx.imag))
     if sum > 16*sps:
+        print(err_)
         error = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         freq_error_log.append(error)
         sum = 0
@@ -103,14 +105,11 @@ freq_error_mean = np.array(freq_error_log).mean()
 print(freq_error_mean)
 freq_fix = fsamples*freq_error_mean
 t = np.arange(0, Tsample*len(rx_fo_delay), Tsample) # create time vector
-rx_signal_downsampled = rx_fo_delay * np.exp(-1j*2*np.pi*freq_fix*t) # perform freq shift
+vector_fix = np.exp(-1j*2*np.pi*freq_fix*t)
+rx_signal_downsampled = rx_fo_delay * vector_fix # perform freq shift
 
 #plt.figure(7)
 #plt.plot( freq_error_log, '.-')
-
-#plt.figure(8)
-#plt.plot( rx_signal_freq_coarse.real, '.-')
-#plt.plot( rx_signal_freq_coarse.imag, '.-')
 
 #downsample
 #rx_signal_downsampled = []

@@ -5,21 +5,23 @@ import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
 
-//typedef FixedPoint#(7, 16)  Angle_Type;
-
 (* synthesize *)
 module mkTb (Empty);
     Cordic_IFC cordic <- mkAtan;
 
-    Angle_Type x = 2;
-    Angle_Type y = 2;
+    Angle_Type x = 1;
+    Angle_Type y = 0;
+    Angle_Type z = 0.523598; //30°
     
     Stmt test = seq 
-        cordic.setPolar(x, y);
-        $write("angle: ");
+        cordic.setPolar(x, y, z);
+        $write("vec: ");
         action
-        let atan <- cordic.getAtan;
-        fxptWrite(10,atan);
+        let x_rot <- cordic.getX;
+        let y_rot <- cordic.getY;
+        fxptWrite(10,x_rot);
+        $write(", ");
+        fxptWrite(10,y_rot);
         endaction
         $display("  ");
     endseq;

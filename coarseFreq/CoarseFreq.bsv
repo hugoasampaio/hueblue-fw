@@ -5,23 +5,24 @@ import Vector::*;
 import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
+import Cordic::*;
 
-
-typedef Complex#(FixedPoint#(20, 20)) Sample_Type;
+typedef Complex#(FixedPoint#(7, 16)) Sample_Type;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 
 interface CoarseFreq_IFC;
     method Action addSample (Sample_Type sample);
-    method ActionValue #(FixedPoint#(20, 20)) getError;
+    method ActionValue #(FixedPoint#(7, 16)) getError;
+    //method ActionValue #(Vector#(64, Reg#(Sample_Type))) getFixedSamples;
 endinterface: CoarseFreq_IFC
 
-function FixedPoint#(20, 20) atan(FixedPoint#(20, 20) x, FixedPoint#(20, 20) y);
+function FixedPoint#(7, 16) atan(FixedPoint#(7, 16) x, FixedPoint#(7, 16) y);
 
-    FixedPoint#(20, 20) xAbs = x;
-    FixedPoint#(20, 20) yAbs = y;
-    FixedPoint#(20, 20) ret = 0.0;
+    FixedPoint#(7, 16) xAbs = x;
+    FixedPoint#(7, 16) yAbs = y;
+    FixedPoint#(7, 16) ret = 0.0;
 
     Bool xPos = True;
     Bool yPos = True;
@@ -68,8 +69,9 @@ module mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Sample_Type) lastSample <-mkReg(0);
     Reg#(Sample_Type) currSample <-mkReg(0);
     Reg#(Sample_Type) accumError <- mkReg(0);
-    Reg#(FixedPoint#(20, 20)) fsError <- mkReg(0);
+    Reg#(FixedPoint#(7, 16)) fsError <- mkReg(0);
     Reg#(UInt#(7)) n <- mkReg(0);
+    Cordic_IFC fixFxError <- mkRotate;
 
     Stmt calcError = seq
         for (n <= 0; n < 64; n <= n+1) seq
@@ -88,6 +90,18 @@ module mkCoarseFreq (CoarseFreq_IFC);
         fxptWrite(10,accumError.img);
         $display("  ");
         fsError <=  (1/(2*3.14159)) * atan(accumError.rel, accumError.img);
+        for (n <= 0; n < 64; n <= n+1) seq
+            fixFxError.setPolar(samples[n].rel, samples[n].img, fsError);
+            action
+                let x <- fixFxError.getX();
+                samples[n].rel <= x;
+            endaction
+            action
+                let y <- fixFxError.getY();
+                samples[n].img <= y;
+            endaction
+        endseq
+
     endseq;
 
     FSM coarseErrorCalc <- mkFSM(calcError);
@@ -100,7 +114,7 @@ module mkCoarseFreq (CoarseFreq_IFC);
         newSample.enq(sample);
     endmethod
 
-    method ActionValue #(FixedPoint#(20, 20)) getError;
+    method ActionValue #(FixedPoint#(7, 16)) getError;
         return fsError;
     endmethod
 
