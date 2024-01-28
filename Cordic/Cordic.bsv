@@ -39,17 +39,10 @@ module mkRotate (Cordic_IFC);
     Reg#(FixedPoint#(7, 16)) x_ <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) y_ <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) z_ <- mkReg(0);
-    Reg#(bit) signZ <- mkReg(0);
 
     Stmt cordicFSM = seq
-        for(n <=0; n < fromInteger(nAngles); n <= n+1) action
-        if (z_ >= 0.0) begin
-            signZ <= 1;
-        end else begin
-            signZ <= 0;
-        end
-
-        if (signZ == 0) begin
+        for(n <= 0; n < fromInteger(nAngles); n <= n+1) action
+        if (z_ > 0.0) begin
             x_ <= x_ - (y_ >> n);
             y_ <= y_ + (x_ >> n);
             z_ <= z_ - angles[n];
@@ -58,7 +51,6 @@ module mkRotate (Cordic_IFC);
             y_ <= y_ - (x_ >> n);
             z_ <= z_ + angles[n];
         end
-
         endaction
     endseq;
 

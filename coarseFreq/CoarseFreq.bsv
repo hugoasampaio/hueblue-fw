@@ -19,46 +19,46 @@ interface CoarseFreq_IFC;
 endinterface: CoarseFreq_IFC
 
 function FixedPoint#(7, 16) atan(FixedPoint#(7, 16) x, FixedPoint#(7, 16) y);
-
+ 
     FixedPoint#(7, 16) xAbs = x;
     FixedPoint#(7, 16) yAbs = y;
-    FixedPoint#(7, 16) ret = 0.0;
+    FixedPoint#(11, 16) x_ = fxptSignExtend(x);
+    FixedPoint#(11, 16) y_ = fxptSignExtend(y);
+    FixedPoint#(11, 16) ret = 0.0;
 
-    Bool xPos = True;
     Bool yPos = True;
 
-    if (xAbs < 0.0) begin
-        xAbs = xAbs * -1;
-        xPos = False;
-    end
-
     if (yAbs < 0.0) begin
-        yAbs = yAbs * -1;
+        yAbs = yAbs * -1.0;
         yPos = False;
     end
 
+    if (xAbs < 0.0) begin
+        xAbs = xAbs * -1.0;
+    end
+
     //1th and 8th octants
-    if (x > 0.0 && (xAbs > yAbs)) begin
-        ret = ((x * y) / ((x * x) + (y * y * 0.28125)));
+    if (x >= 0.0 && (xAbs > yAbs)) begin
+        ret = ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
     end
 
     //2nd and 3rd octants
-    if (y > 0.0 && (yAbs >= xAbs)) begin
-        ret = 1.570796 - ((x * y) / ((y * y) + (x * x * 0.28125)));
+    if (y >= 0.0 && (yAbs >= xAbs)) begin
+        ret = 1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
     end
     //4th and 5th octants
     if (x < 0.0 && (xAbs > yAbs)) begin
         if (yPos == True) begin
-            ret = 3.14159 + ((x * y) / ((x * x) + (y * y * 0.28125)));
+            ret = 3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
         end 
         else begin
-            ret = -3.14159 + ((x * y) / ((x * x) + (y * y * 0.28125)));
+            ret = -3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
         end 
     end
     if (y < 0.0 && (yAbs >= xAbs)) begin
-        ret = -1.570796 - ((x * y) / ((y * y) + (x * x * 0.28125)));
+        ret = -1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
     end
-    return ret;
+    return fxptTruncate(ret);
 
 endfunction: atan
 
@@ -77,7 +77,7 @@ module mkCoarseFreq (CoarseFreq_IFC);
         for (n <= 0; n < 64; n <= n+1) seq
             currSample <= newSample.first;
             newSample.deq;
-            lastSample.img <=  lastSample.img * -1; //conjugado
+            lastSample.img <=  lastSample.img * -1.0; //conjugado
             accumError <= accumError + (currSample * lastSample);
             //normalizar accumError
             lastSample <= currSample;
@@ -90,6 +90,7 @@ module mkCoarseFreq (CoarseFreq_IFC);
         fxptWrite(10,accumError.img);
         $display("  ");
         fsError <=  (1/(2*3.14159)) * atan(accumError.rel, accumError.img);
+        //fsError <= atan(accumError.rel, accumError.img);
         for (n <= 0; n < 64; n <= n+1) seq
             fixFxError.setPolar(samples[n].rel, samples[n].img, fsError);
             action

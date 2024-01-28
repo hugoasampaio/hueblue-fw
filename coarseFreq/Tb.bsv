@@ -8,11 +8,21 @@ import FixedPoint::*;
 (* synthesize *)
 module mkTb (Empty);
     CoarseFreq_IFC coarseFreq <- mkCoarseFreq;
-    Reg#(Complex#(FixedPoint#(5, 16))) x <- mkReg(0);
     Reg#(FixedPoint#(5, 16)) res <-mkReg(0);
  
-    Stmt test = seq 
-        x <= cmplx(3.0, 3.0);
+    Stmt test = seq
+        $display("  ");
+        fxptWrite(5, atan(2.819, 1.026));//20 --- 0.349
+        $display("  ");
+        fxptWrite(5, atan(-1.026, 2.819));//110 --- 1.9198
+        $display("  ");
+        fxptWrite(5, atan(-2.819, -1.026));//200 --- 3.49
+        $display("  ");
+        fxptWrite(5, atan(1.026, -2.819));//290 --- 5.061
+        $display("  ");
+        fxptWrite(5, atan(-5.83674, 30.597488));//290 --- 5.061
+        $display("  ");
+
         coarseFreq.addSample(cmplx(-0.00000045 , 0.00000000));
         coarseFreq.addSample(cmplx(-0.00000012 , 0.00000062));
         coarseFreq.addSample(cmplx(0.00000164 , 0.00000065));
@@ -80,19 +90,13 @@ module mkTb (Empty);
         coarseFreq.addSample(cmplx(-0.90590647 , 0.49802630));
         coarseFreq.addSample(cmplx(-0.18159743 , -0.55889942));
         coarseFreq.addSample(cmplx(-0.02975169 , 0.00375851));
-        $display("energy error expected (-6.074024636019345 +j31.841152218217513), 100.80º, 1.7592rad");
-        $write("energy error calculated ");
+        //$display("energy error expected (-6.074024636019345 +j31.841152218217513), 1.7592 rad");
+        $write("coarse freq error: ");
         action
         let err <- coarseFreq.getError;
-        fxptWrite(10,err);
+        fxptWrite(5,err);
         endaction
         $display("  ");
-        /*
-        $write("atan: ");
-        res <= (x.rel * x.img) / ((x.rel * x.rel) + (x.img * x.img * 0.28125));
-        fxptWrite(10,res);
-        $display("   ");
-        */
     endseq;
     mkAutoFSM(test);
     
