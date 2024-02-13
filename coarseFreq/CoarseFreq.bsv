@@ -6,6 +6,12 @@ import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
 import Cordic::*;
+import CBus::*;
+
+typedef 8    CBADDRSIZE; //size of configuration address bus to decode
+typedef 16   CBDATASIZE; //size of configuration data bus
+typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
+typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 
 typedef Complex#(FixedPoint#(7, 16)) Sample_Type;
 Integer sps = 4;
@@ -62,8 +68,7 @@ function FixedPoint#(7, 16) atan(FixedPoint#(7, 16) x, FixedPoint#(7, 16) y);
 
 endfunction: atan
 
-(* synthesize *)
-module mkCoarseFreq (CoarseFreq_IFC);
+module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Vector#(64, Reg#(Sample_Type)) samples <-replicateM(mkReg(0));
     FIFO#(Sample_Type) newSample <- mkFIFO;
     Reg#(Sample_Type) lastSample <-mkReg(0);
@@ -71,26 +76,41 @@ module mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Sample_Type) accumError <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) fsError <- mkReg(0);
     Reg#(UInt#(7)) n <- mkReg(0);
+
+    Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, 'hffff);
+
     Cordic_IFC fixFxError <- mkRotate;
 
     Stmt calcError = seq
         for (n <= 0; n < 64; n <= n+1) seq
             currSample <= newSample.first;
             newSample.deq;
+            currSample.rel.f <= currSample.rel.f & limitCurrS;
+            currSample.img.f <= currSample.img.f & limitCurrS;
+
             lastSample.img <=  lastSample.img * -1.0; //conjugado
+            lastSample.rel.f <= lastSample.rel.f & limitLastS;
+            lastSample.img.f <= lastSample.img.f & limitLastS;
+
             accumError <= accumError + (currSample * lastSample);
-            //normalizar accumError
+            accumError.rel.f <= accumError.rel.f & limitAccumE;
+            accumError.img.f <= accumError.img.f & limitAccumE;
+
             lastSample <= currSample;
             samples[n] <= currSample;
         endseq
-        //based on understanding dsp equation
+        /*based on understanding dsp equation
         $write("real: ");
         fxptWrite(10,accumError.rel);
         $write(" img: ");
         fxptWrite(10,accumError.img);
         $display("  ");
+        */
         fsError <=  (1/(2*3.14159)) * atan(accumError.rel, accumError.img);
-        //fsError <= atan(accumError.rel, accumError.img);
+        fsError.f <= fsError.f & limitError;
         for (n <= 0; n < 64; n <= n+1) seq
             fixFxError.setPolar(samples[n].rel, samples[n].img, fsError);
             action

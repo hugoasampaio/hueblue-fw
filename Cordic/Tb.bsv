@@ -4,10 +4,11 @@ import Cordic::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
+import CBus::*;
 
 (* synthesize *)
 module mkTb (Empty);
-    Cordic_IFC cordic <- mkRotate;
+    IWithCBus#(LimitedCordic, Cordic_IFC) cordic <- exposeCBusIFC(mkRotate);
 
     // 1 /_10
     FixedPoint#(7, 16) x2 = 0.98481;
@@ -31,11 +32,10 @@ module mkTb (Empty);
 
     
     Stmt test = seq 
-
-        cordic.setPolar(x2, y2, z2);
+        cordic.device_ifc.setPolar(x2, y2, z2);
         action
-        let x_rot <- cordic.getX;
-        let y_rot <- cordic.getY;
+        let x_rot <- cordic.device_ifc.getX;
+        let y_rot <- cordic.device_ifc.getY;
         $write("10: ");
         fxptWrite(10,x_rot);
         $write(", ");
@@ -43,33 +43,33 @@ module mkTb (Empty);
         endaction
         $display("  ");
 
-        cordic.setPolar(x3, y3, z3);
+        cordic.device_ifc.setPolar(x3, y3, z3);
         $write("15: ");
         action
-        let x_rot <- cordic.getX;
-        let y_rot <- cordic.getY;
+        let x_rot <- cordic.device_ifc.getX;
+        let y_rot <- cordic.device_ifc.getY;
         fxptWrite(10,x_rot);
         $write(", ");
         fxptWrite(10,y_rot);
         endaction
         $display("  ");
 
-        cordic.setPolar(x4, y4, z4);
+        cordic.device_ifc.setPolar(x4, y4, z4);
         $write("20: ");
         action
-        let x_rot <- cordic.getX;
-        let y_rot <- cordic.getY;
+        let x_rot <- cordic.device_ifc.getX;
+        let y_rot <- cordic.device_ifc.getY;
         fxptWrite(10,x_rot);
         $write(", ");
         fxptWrite(10,y_rot);
         endaction
         $display("  ");
 
-        cordic.setPolar(x1, y1, z1);
+        cordic.device_ifc.setPolar(x1, y1, z1);
         $write("30: ");
         action
-        let x_rot <- cordic.getX;
-        let y_rot <- cordic.getY;
+        let x_rot <- cordic.device_ifc.getX;
+        let y_rot <- cordic.device_ifc.getY;
         fxptWrite(10,x_rot);
         $write(", ");
         fxptWrite(10,y_rot);

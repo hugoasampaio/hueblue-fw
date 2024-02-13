@@ -6,6 +6,12 @@ import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
 import Cordic::*;
+import CBus::*;
+
+typedef 8    CBADDRSIZE; //size of configuration address bus to decode
+typedef 16   CBDATASIZE; //size of configuration data bus
+typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
+typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCostasLoop;
 
 typedef FixedPoint#(7, 16)      SampleType;
 typedef Complex#(SampleType)    ComplexSampleType;
@@ -19,8 +25,7 @@ interface CostasLoop_IFC;
     method ActionValue #(SampleType) getError;
 endinterface: CostasLoop_IFC
 
-(* synthesize *)
-module mkCostasLoop (CostasLoop_IFC);
+module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
 
     FIFO#(ComplexSampleType) inSample <- mkFIFO;
     FIFO#(ComplexSampleType) outSample <- mkFIFO;
@@ -28,7 +33,11 @@ module mkCostasLoop (CostasLoop_IFC);
 
     Reg#(SampleType) phase <- mkReg(0);
     Reg#(SampleType) freq <- mkReg(0);
-    Reg#(SampleType) error <- mkReg(0);    
+    Reg#(SampleType) error <- mkReg(0);  
+
+    Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd8, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd9, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd10, o:0},  'hffff);
 
     Cordic_IFC fixFxError <- mkRotate;
     
@@ -46,9 +55,12 @@ module mkCostasLoop (CostasLoop_IFC);
         endaction
         outSample.enq(sample);
         error <= sample.rel * sample.img;
+        error.f <= error.f & limitError;
         freq <= freq + (error * 0.00932);
+        freq.f <= freq.f & limitFreqs;
         phase <= phase + freq + (error * 0.132);
-
+        phase.f <= phase.f & limitPhase;
+        
         //the cordic works +45 to -45
         while (phase > (3.14159/2)) seq
             phase <= phase - (3.14159/2);

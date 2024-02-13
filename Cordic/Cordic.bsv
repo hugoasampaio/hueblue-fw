@@ -4,6 +4,13 @@ import Vector::*;
 import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
+import CBus::*;
+
+typedef 8    CBADDRSIZE; //size of configuration address bus to decode
+typedef 16   CBDATASIZE; //size of configuration data bus
+
+typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
+typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCordic;
 
 //typedef FixedPoint#(4, 16)  FixedPoint#(4, 16);
 Integer nAngles = 14;
@@ -32,16 +39,20 @@ interface Cordic_IFC;
     method ActionValue #(FixedPoint#(7, 16)) getY();
 endinterface: Cordic_IFC
 
-(* synthesize *)
-module mkRotate (Cordic_IFC);
+module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(FixedPoint#(7, 16)) sumAngle <-mkReg(0);
     Reg#(UInt#(4)) n <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) x_ <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) y_ <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) z_ <- mkReg(0);
 
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd4, o:0},  'hffff);
+
     Stmt cordicFSM = seq
-        for(n <= 0; n < fromInteger(nAngles); n <= n+1) action
+        for(n <= 0; n < fromInteger(nAngles); n <= n+1) seq
+        action
         if (z_ > 0.0) begin
             x_ <= x_ - (y_ >> n);
             y_ <= y_ + (x_ >> n);
@@ -52,6 +63,13 @@ module mkRotate (Cordic_IFC);
             z_ <= z_ + angles[n];
         end
         endaction
+
+        action
+        x_.f <= x_.f & limitX;
+        y_.f <= y_.f & limitY;
+        z_.f <= z_.f & limitZ;
+        endaction
+        endseq
     endseq;
 
     FSM atanCalc <- mkFSM(cordicFSM);

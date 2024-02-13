@@ -6,7 +6,6 @@ import Complex::*;
 import FixedPoint::*;
 import Vector::*;
 import FIRcoeff::*;
-import Limit::*;
 import CBus::*;
 
 (* synthesize *)

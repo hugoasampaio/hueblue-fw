@@ -6,7 +6,6 @@ import FIFO::*;
 import FIRcoeff::*;
 import StmtFSM::*;
 import FixedPoint::*;
-import Limit::*;
 import CBus::*;
 
 typedef FIRtap_Type Sample_Type;
@@ -27,8 +26,8 @@ module [LimitedOps] mkFIRfilter (FIRfilter_type);
     Reg#(Sample_Type) m <- mkReg(0);
     Reg#(UInt#(7)) n <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitMult <- mkCBRegRW(CRAddr{a: 5'd1, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitSum <- mkCBRegRW(CRAddr{a: 5'd2, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitMult <- mkCBRegRW(CRAddr{a: 8'd1, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitSum <- mkCBRegRW(CRAddr{a: 8'd2, o:0},  'hffff);
 
 
     Stmt convolve = seq

@@ -2,7 +2,7 @@ package FIRcoeff;
 import FixedPoint::*;
 import Vector::*;
 
-typedef 5    CBADDRSIZE; //size of configuration address bus to decode
+typedef 8    CBADDRSIZE; //size of configuration address bus to decode
 typedef 16   CBDATASIZE; //size of configuration data bus
 
 typedef FixedPoint#(3, CBDATASIZE) FIRtap_Type;
