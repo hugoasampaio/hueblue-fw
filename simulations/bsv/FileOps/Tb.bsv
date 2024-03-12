@@ -11,9 +11,9 @@ module mkTb (Empty);
     FIFOF#(FixedPoint#(7, 16)) infifo <- mkSizedFIFOF(3);
     LineReader lr <- mkLineReader;
     mkAutoFSM(seq
-        while (cnt < 3) seq
-            cnt <= cnt + 1;
+        while (cnt < 15) seq
             lr.start;
+            cnt <= cnt + 1;
             infifo.enq(lr.result);
             $write(cnt, ": ");
             fxptWrite(8,infifo.first);
