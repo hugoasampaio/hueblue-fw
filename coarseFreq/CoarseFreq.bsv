@@ -24,6 +24,7 @@ interface CoarseFreq_IFC;
     //method ActionValue #(Vector#(64, Reg#(Sample_Type))) getFixedSamples;
 endinterface: CoarseFreq_IFC
 
+//based on understanding dsp equation
 function FixedPoint#(7, 16) atan(FixedPoint#(7, 16) x, FixedPoint#(7, 16) y);
  
     FixedPoint#(7, 16) xAbs = x;
@@ -75,6 +76,10 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Sample_Type) currSample <-mkReg(0);
     Reg#(Sample_Type) accumError <- mkReg(0);
     Reg#(FixedPoint#(7, 16)) fsError <- mkReg(0);
+    
+    Reg#(FixedPoint#(7, 16)) xFix <- mkReg(1.0);
+    Reg#(FixedPoint#(7, 16)) yFix <- mkReg(0.0);
+
     Reg#(UInt#(7)) n <- mkReg(0);
 
     Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hffff);
@@ -82,7 +87,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, 'hffff);
     Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, 'hffff);
 
-    Cordic_IFC fixFxError <- mkRotate;
+    Cordic_IFC cordic <- mkRotate;
 
     Stmt calcError = seq
         for (n <= 0; n < 64; n <= n+1) seq
@@ -102,27 +107,26 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
             lastSample <= currSample;
             samples[n] <= currSample;
         endseq
-        /*based on understanding dsp equation
-        $write("real: ");
-        fxptWrite(10,accumError.rel);
-        $write(" img: ");
-        fxptWrite(10,accumError.img);
-        $display("  ");
-        */
-        fsError <=  (1/(2*3.14159)) * atan(accumError.rel, accumError.img);
+
+        fsError <=  0.159155 * atan(accumError.rel, accumError.img);
         fsError.f <= fsError.f & limitError;
+
         for (n <= 0; n < 64; n <= n+1) seq
-            fixFxError.setPolar(samples[n].rel, samples[n].img, fsError);
+            samples[n] <= samples[n] * cmplx(xFix, yFix);
+            cordic.setPolar(xFix, yFix, -2.0 * 3.141593 * fsError);
             action
-                let x <- fixFxError.getX();
-                samples[n].rel <= x;
+            let x_rot <- cordic.getX;
+            let y_rot <- cordic.getY;
+            xFix <= x_rot;
+            yFix <= y_rot;
             endaction
             action
-                let y <- fixFxError.getY();
-                samples[n].img <= y;
+            fxptWrite(6, samples[n].rel);
+            $write(", ");
+            fxptWrite(6, samples[n].img);
+            $display(" ");
             endaction
         endseq
-
     endseq;
 
     FSM coarseErrorCalc <- mkFSM(calcError);
@@ -136,6 +140,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     endmethod
 
     method ActionValue #(FixedPoint#(7, 16)) getError;
+        coarseErrorCalc.waitTillDone();
         return fsError;
     endmethod
 
