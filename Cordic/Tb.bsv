@@ -6,75 +6,52 @@ import Complex::*;
 import FixedPoint::*;
 import CBus::*;
 
+Integer test_size = 5;
+//can rotate 90 degree maximum
 (* synthesize *)
 module mkTb (Empty);
     IWithCBus#(LimitedCordic, Cordic_IFC) cordic <- exposeCBusIFC(mkRotate);
 
-    // 1 /_10
-    FixedPoint#(7, 16) x2 = 0.98481;
-    FixedPoint#(7, 16) y2 = 0.17365;
-    FixedPoint#(7, 16) z2 = -0.17453; //-10°
+    //10,15,20,60,120
+    FixedPoint#(7,16) x[test_size] = {0.98481, 0.96593,    0.96593,  0.5,     -0.5};
+    FixedPoint#(7,16) y[test_size] = {0.17365, 0.25882,    0.25882,  0.86603,  0.86603};
+    FixedPoint#(7,16) z[test_size] = {-0.17453, -0.26180, -0.26180, -1.04720, -2.094395};
 
-    // 1 /_ 15
-    FixedPoint#(7, 16) x3 = 0.96593;
-    FixedPoint#(7, 16) y3 = 0.25882;
-    FixedPoint#(7, 16) z3 = -0.26180; //-15°
-
-    // 1 /_ 20
-    FixedPoint#(7, 16) x4 = 0.93969;
-    FixedPoint#(7, 16) y4 = 0.34202;
-    FixedPoint#(7, 16) z4 = -0.34907; //-20°
-
-    // 1 /_30
-    FixedPoint#(7, 16) x1 = 0.86603;
-    FixedPoint#(7, 16) y1 = 0.5;
-    FixedPoint#(7, 16) z1 = -0.523598; //-30°
-
+    Reg#(UInt#(10)) n <- mkReg(0);
+    Reg#(FixedPoint#(7, 16)) realV <- mkReg(1.0);
+    Reg#(FixedPoint#(7, 16)) imagV <- mkReg(0.0);
     
     Stmt test = seq 
-        cordic.device_ifc.setPolar(x2, y2, z2);
-        action
-        let x_rot <- cordic.device_ifc.getX;
-        let y_rot <- cordic.device_ifc.getY;
-        $write("10: ");
-        fxptWrite(10,x_rot);
-        $write(", ");
-        fxptWrite(10,y_rot);
-        endaction
-        $display("  ");
+        for (n <= 0; n < fromInteger(test_size); n <= n+1) seq
+            cordic.device_ifc.setPolar(x[n], y[n], z[n]);
+            action
+            let x_rot <- cordic.device_ifc.getX;
+            let y_rot <- cordic.device_ifc.getY;
+            $write("n: ");
+            fxptWrite(6,x_rot);
+            $write(", ");
+            fxptWrite(6,y_rot);
+            endaction
+            $display("  ");
+        endseq
 
-        cordic.device_ifc.setPolar(x3, y3, z3);
-        $write("15: ");
-        action
-        let x_rot <- cordic.device_ifc.getX;
-        let y_rot <- cordic.device_ifc.getY;
-        fxptWrite(10,x_rot);
-        $write(", ");
-        fxptWrite(10,y_rot);
-        endaction
-        $display("  ");
 
-        cordic.device_ifc.setPolar(x4, y4, z4);
-        $write("20: ");
-        action
-        let x_rot <- cordic.device_ifc.getX;
-        let y_rot <- cordic.device_ifc.getY;
-        fxptWrite(10,x_rot);
-        $write(", ");
-        fxptWrite(10,y_rot);
-        endaction
-        $display("  ");
+        $display("rotation test");
+        for (n <= 1; n < 73; n <= n+1) seq
+            cordic.device_ifc.setPolar(realV, imagV, 0.17453);
+            action
+            let x_rot <- cordic.device_ifc.getX;
+            let y_rot <- cordic.device_ifc.getY;
+            realV <= x_rot;
+            imagV <= y_rot;
+            endaction
+        endseq
 
-        cordic.device_ifc.setPolar(x1, y1, z1);
-        $write("30: ");
-        action
-        let x_rot <- cordic.device_ifc.getX;
-        let y_rot <- cordic.device_ifc.getY;
-        fxptWrite(10,x_rot);
+        $write(10*n, ": ");
+        fxptWrite(6,realV);
         $write(", ");
-        fxptWrite(10,y_rot);
-        endaction
-        $display("  ");
+        fxptWrite(6,imagV);
+        $display(" ");
     endseq;
     mkAutoFSM(test);
     
