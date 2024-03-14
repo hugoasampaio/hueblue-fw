@@ -13,25 +13,26 @@ typedef 16   CBDATASIZE; //size of configuration data bus
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 
-typedef Complex#(FixedPoint#(7, 16)) Sample_Type;
+typedef Complex#(FixedPoint#(15, 16)) Sample_Type;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
+Integer loopFix = 56;
 
 interface CoarseFreq_IFC;
     method Action addSample (Sample_Type sample);
-    method ActionValue #(FixedPoint#(7, 16)) getError;
+    method ActionValue #(FixedPoint#(15, 16)) getError;
     //method ActionValue #(Vector#(64, Reg#(Sample_Type))) getFixedSamples;
 endinterface: CoarseFreq_IFC
 
 //based on understanding dsp equation
-function FixedPoint#(7, 16) atan(FixedPoint#(7, 16) x, FixedPoint#(7, 16) y);
+function FixedPoint#(15, 16) atan(FixedPoint#(15, 16) x, FixedPoint#(15, 16) y);
  
-    FixedPoint#(7, 16) xAbs = x;
-    FixedPoint#(7, 16) yAbs = y;
-    FixedPoint#(11, 16) x_ = fxptSignExtend(x);
-    FixedPoint#(11, 16) y_ = fxptSignExtend(y);
-    FixedPoint#(11, 16) ret = 0.0;
+    FixedPoint#(15, 16) xAbs = x;
+    FixedPoint#(15, 16) yAbs = y;
+    FixedPoint#(15, 16) x_ = fxptSignExtend(x);
+    FixedPoint#(15, 16) y_ = fxptSignExtend(y);
+    FixedPoint#(15, 16) ret = 0.0;
 
     Bool yPos = True;
 
@@ -75,12 +76,12 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Sample_Type) lastSample <-mkReg(0);
     Reg#(Sample_Type) currSample <-mkReg(0);
     Reg#(Sample_Type) accumError <- mkReg(0);
-    Reg#(FixedPoint#(7, 16)) fsError <- mkReg(0);
+    Reg#(FixedPoint#(15, 16)) fsError <- mkReg(0);
     
-    Reg#(FixedPoint#(7, 16)) xFix <- mkReg(1.0);
-    Reg#(FixedPoint#(7, 16)) yFix <- mkReg(0.0);
+    Reg#(FixedPoint#(15, 16)) xFix <- mkReg(1.0);
+    Reg#(FixedPoint#(15, 16)) yFix <- mkReg(0.0);
 
-    Reg#(UInt#(7)) n <- mkReg(0);
+    Reg#(UInt#(8)) n <- mkReg(0);
 
     Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hffff);
     Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, 'hffff);
@@ -90,7 +91,11 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Cordic_IFC cordic <- mkRotate;
 
     Stmt calcError = seq
-        for (n <= 0; n < 64; n <= n+1) seq
+        lastSample <= cmplx(0,0);
+        currSample <= cmplx(0,0);
+        accumError <= cmplx(0,0);
+        fsError    <= 0;
+        for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             currSample <= newSample.first;
             newSample.deq;
             currSample.rel.f <= currSample.rel.f & limitCurrS;
@@ -111,7 +116,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
         fsError <=  0.159155 * atan(accumError.rel, accumError.img);
         fsError.f <= fsError.f & limitError;
 
-        for (n <= 0; n < 64; n <= n+1) seq
+        for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             samples[n] <= samples[n] * cmplx(xFix, yFix);
             cordic.setPolar(xFix, yFix, -2.0 * 3.141593 * fsError);
             action
@@ -139,7 +144,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
         newSample.enq(sample);
     endmethod
 
-    method ActionValue #(FixedPoint#(7, 16)) getError;
+    method ActionValue #(FixedPoint#(15, 16)) getError;
         coarseErrorCalc.waitTillDone();
         return fsError;
     endmethod

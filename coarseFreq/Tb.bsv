@@ -10,17 +10,21 @@ import CBus::*;
 module mkTb (Empty);
     IWithCBus#(LimitedCoarseFreq, CoarseFreq_IFC) coarseFreq <- exposeCBusIFC(mkCoarseFreq);
     LineReader lr <- mkLineReader;
-    Reg#(FixedPoint#(5, 16)) res <-mkReg(0);
-    Reg#(FixedPoint#(7, 16)) realValue <-mkReg(0);
-    Reg#(FixedPoint#(7, 16)) imagValue <-mkReg(0);
+   
+    Reg#(FixedPoint#(15, 16)) realValue <-mkReg(0);
+    Reg#(FixedPoint#(15, 16)) imagValue <-mkReg(0);
 
-    Reg#(UInt#(7)) n <- mkReg(0);
-	Reg#(UInt#(3)) m <- mkReg(0);
+	Reg#(FixedPoint#(15, 16)) limitV <-mkReg(0);
+
+    Reg#(UInt#(8)) n <- mkReg(0);
+	Reg#(UInt#(6)) m <- mkReg(0);
  
     Stmt test = seq
-        //coarseFreq.device_ifc.addSample(cmplx(0.0, 0.0));
-		for (m <= 0; m < 7; m <= m+1) seq
-			for (n <= 0; n < 64; n <= n+1) seq
+		lr.start;
+		limitV <= lr.result;
+		coarseFreq.cbus_ifc.write(11, 16'hffff << limitV.i);
+		for (m <= 0; m < 2; m <= m+1) seq
+			for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 				lr.start;
 				realValue <= lr.result;
 				lr.start;
@@ -30,6 +34,7 @@ module mkTb (Empty);
 			action
 			let err <- coarseFreq.device_ifc.getError;
 			//fxptWrite(5,err);
+			//$display(" ");
 			//coarseFreq.device_ifc.getError;
 			endaction
 		endseq
@@ -38,12 +43,14 @@ module mkTb (Empty);
     
 endmodule: mkTb
 
+/*----------------------------------------------------------------------------------------*/
+
 interface LineReader;
 	method Action start;
-	method FixedPoint#(7, 16) result;
+	method FixedPoint#(15, 16) result;
 endinterface
 
-FixedPoint#(7, 24) fracDigits[8] = {
+FixedPoint#(15, 24) fracDigits[8] = {
 		0.1,
 		0.01,
 		0.001,
@@ -58,7 +65,7 @@ module mkLineReader(LineReader);
 	function ord(s) = fromInteger(charToInteger(stringHead(s)));
 
 	Reg#(Int#(7)) c <- mkRegU;
-	Reg#(FixedPoint#(7, 16)) number <-mkReg(0.0);
+	Reg#(FixedPoint#(15, 16)) number <-mkReg(0.0);
 	Reg#(UInt#(3)) fracDigit <- mkReg(0);
 
 	Reg#(Bool) dot <- mkReg(False);
