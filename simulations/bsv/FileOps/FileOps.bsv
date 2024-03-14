@@ -86,7 +86,6 @@ module mkLineReader(LineReader);
 	method result if (fsm.done) = number;
 
 endmodule
-
 endpackage : FileOps
 
 

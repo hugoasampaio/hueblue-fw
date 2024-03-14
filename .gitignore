@@ -6,3 +6,5 @@
 *.h
 *.o
 *.exe
+*.log
+*.dat
