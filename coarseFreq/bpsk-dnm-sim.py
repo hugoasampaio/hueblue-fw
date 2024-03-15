@@ -45,31 +45,16 @@ def gen_signal():
     h = np.sinc(n - delay) # calc filter taps
     h *= np.hamming(N) # window the filter to make sure it decays to 0 on both sides
     h /= np.sum(h) # normalize to get unity gain, we don't want to change the amplitude/power
-    delayed_n_shifted_signal = np.convolve(tx_signal, h) # apply filter
-    return delayed_n_shifted_signal
-
-def simulation_step(curr_limiter: int, last_limiter: int, 
-                    accum_limiter: int, error_limiter: int,
-                    rx_signal: np.array):
-
+    rx_signal = np.convolve(tx_signal, h) # apply filter
     #rx - step 2: freq offset from different LO
     fo = fsamples*0.28 #freq offset in %
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
+    return rx_fo_delay
 
-    #print values to run bittrue simulation on bsv
-    stdout_fd = sys.stdout
-    sys.stdout = open("log/dnm-sim-py.log", "w")
-    print(f'{curr_limiter}.0, {last_limiter}.0, {accum_limiter}.0, {error_limiter}.0')
-    for datum in rx_fo_delay:
-        print("{:.6f}".format(datum.real), 
-            ",", 
-            "{:.6f}".format(datum.imag))
-    sys.stdout.close()
-    sys.stdout = stdout_fd
+#########################################################################################
 
-    os.system("./coarseFreq.exe < log/dnm-sim-py.log > log/dnm-sim-bsv.log")
-
+def perform_estimation_n_fix(rx_signal: np.array):
     #rx - step 3: delay 'n' multiply coarse freq error estimation
     freq_error_log = []
     err_log = []
@@ -77,7 +62,7 @@ def simulation_step(curr_limiter: int, last_limiter: int,
     last_rx = complex(0,0)
     err_ = complex(0,0)
     sum = 0
-    for rx in rx_fo_delay:
+    for rx in rx_signal:
         sum += 1
         conj = (rx * last_rx.conjugate())
         err_ += conj
@@ -96,9 +81,29 @@ def simulation_step(curr_limiter: int, last_limiter: int,
     #apply freq error fix
     freq_error_mean = np.array(freq_error_log).mean()
     freq_fix = fsamples*freq_error_mean
-    t = np.arange(0, Tsample*len(rx_fo_delay), Tsample) # create time vector
+    t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     vector_fix = np.exp(-1j*2*np.pi*freq_fix*t)
-    coarse_freq_corrected_python = rx_fo_delay * vector_fix # perform freq shift
+    coarse_freq_corrected_python = rx_signal * vector_fix # perform freq shift
+    return coarse_freq_corrected_python
+
+###################################################################################
+
+def simulation_step(curr_limiter: int, last_limiter: int, 
+                    accum_limiter: int, error_limiter: int,
+                    rx_signal: np.array, reference_signal: np.array):
+
+    #print values to run bittrue simulation on bsv
+    stdout_fd = sys.stdout
+    sys.stdout = open("log/dnm-sim-py.log", "w")
+    print(f'{curr_limiter}.0, {last_limiter}.0, {accum_limiter}.0, {error_limiter}.0')
+    for datum in rx_signal:
+        print("{:.6f}".format(datum.real), 
+            ",", 
+            "{:.6f}".format(datum.imag))
+    sys.stdout.close()
+    sys.stdout = stdout_fd
+
+    os.system("./coarseFreq.exe < log/dnm-sim-py.log > log/dnm-sim-bsv.log")
 
     #for datum in vector_fix:
     #    print("{:.6f}".format(datum.real), 
@@ -133,20 +138,21 @@ def simulation_step(curr_limiter: int, last_limiter: int,
     print("c:", curr_limiter,  "l:", last_limiter, 
           "a:", accum_limiter, "e:", error_limiter, 
           " sqnr: ", 
-          sqnr(coarse_freq_corrected_python[0:112], coarse_freq_corrected_bsv[0:112]))
-    plt.figure(1)
-    plt.plot( coarse_freq_corrected_python.real, '.-')
-    plt.plot(coarse_freq_corrected_python.imag,'.-')
+          sqnr(reference_signal[0:112], coarse_freq_corrected_bsv[0:112]))
+    #plt.figure(1)
+    #plt.plot(reference_signal.real, '.-')
+    #plt.plot(reference_signal.imag,'.-')
 
-    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-    plt.show()
+    #plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    #plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    #plt.show()
 
-base_signal = gen_signal()
-
-#for curr in range(9):
-#    for last in range (9):
-#        for accum in range(9):
-#            for error in range(9):
-#                simulation_step(curr, last, accum, error, base_signal)
-simulation_step(8, 8, 5, 4, base_signal)
+base_signal  =  gen_signal()
+fixed_signal =  perform_estimation_n_fix(base_signal)
+for curr in range(13):
+    for last in range (13):
+        for accum in range(13):
+            for error in range(13):
+                simulation_step(curr, last, accum, error, base_signal, fixed_signal)
+#simulation_step(0, 0, 0, 0, base_signal, fixed_signal)
+#simulation_step(8, 8, 5, 4, base_signal, fixed_signal)

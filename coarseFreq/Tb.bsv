@@ -5,19 +5,20 @@ import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
 import CBus::*;
+import Constants::*;
 
 (* synthesize *)
 module mkTb (Empty);
     IWithCBus#(LimitedCoarseFreq, CoarseFreq_IFC) coarseFreq <- exposeCBusIFC(mkCoarseFreq);
     LineReader lr <- mkLineReader;
    
-    Reg#(FixedPoint#(15, 16)) realValue <-mkReg(0);
-    Reg#(FixedPoint#(15, 16)) imagValue <-mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
 
-	Reg#(FixedPoint#(15, 16)) currV <-mkReg(0);
-	Reg#(FixedPoint#(15, 16)) lastV <-mkReg(0);
-	Reg#(FixedPoint#(15, 16)) accumV <-mkReg(0);
-	Reg#(FixedPoint#(15, 16)) errorV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) currV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) lastV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) accumV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) errorV <-mkReg(0);
 
     Reg#(UInt#(8)) n <- mkReg(0);
 	Reg#(UInt#(6)) m <- mkReg(0);
@@ -60,10 +61,10 @@ endmodule: mkTb
 
 interface LineReader;
 	method Action start;
-	method FixedPoint#(15, 16) result;
+	method REAL_SAMPLE_TYPE result;
 endinterface
 
-FixedPoint#(15, 24) fracDigits[8] = {
+REAL_SAMPLE_TYPE fracDigits[8] = {
 		0.1,
 		0.01,
 		0.001,
@@ -78,7 +79,7 @@ module mkLineReader(LineReader);
 	function ord(s) = fromInteger(charToInteger(stringHead(s)));
 
 	Reg#(Int#(7)) c <- mkRegU;
-	Reg#(FixedPoint#(15, 16)) number <-mkReg(0.0);
+	Reg#(REAL_SAMPLE_TYPE) number <-mkReg(0.0);
 	Reg#(UInt#(3)) fracDigit <- mkReg(0);
 
 	Reg#(Bool) dot <- mkReg(False);

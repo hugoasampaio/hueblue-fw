@@ -7,32 +7,31 @@ import StmtFSM::*;
 import FixedPoint::*;
 import Cordic::*;
 import CBus::*;
+import Constants::*;
 
-typedef 8    CBADDRSIZE; //size of configuration address bus to decode
-typedef 16   CBDATASIZE; //size of configuration data bus
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 
-typedef Complex#(FixedPoint#(15, 16)) Sample_Type;
+
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 Integer loopFix = 56;
 
 interface CoarseFreq_IFC;
-    method Action addSample (Sample_Type sample);
-    method ActionValue #(FixedPoint#(15, 16)) getError;
+    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
     //method ActionValue #(Vector#(64, Reg#(Sample_Type))) getFixedSamples;
 endinterface: CoarseFreq_IFC
 
 //based on understanding dsp equation
-function FixedPoint#(15, 16) atan(FixedPoint#(15, 16) x, FixedPoint#(15, 16) y);
+function FixedPoint#(15, CBDATASIZE) atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
  
-    FixedPoint#(15, 16) xAbs = x;
-    FixedPoint#(15, 16) yAbs = y;
-    FixedPoint#(15, 16) x_ = fxptSignExtend(x);
-    FixedPoint#(15, 16) y_ = fxptSignExtend(y);
-    FixedPoint#(15, 16) ret = 0.0;
+    REAL_SAMPLE_TYPE xAbs = x;
+    REAL_SAMPLE_TYPE yAbs = y;
+    REAL_SAMPLE_TYPE x_ = x;
+    REAL_SAMPLE_TYPE y_ = y;
+    REAL_SAMPLE_TYPE ret = 0.0;
 
     Bool yPos = True;
 
@@ -71,15 +70,15 @@ function FixedPoint#(15, 16) atan(FixedPoint#(15, 16) x, FixedPoint#(15, 16) y);
 endfunction: atan
 
 module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
-    Vector#(64, Reg#(Sample_Type)) samples <-replicateM(mkReg(0));
-    FIFO#(Sample_Type) newSample <- mkFIFO;
-    Reg#(Sample_Type) lastSample <-mkReg(0);
-    Reg#(Sample_Type) currSample <-mkReg(0);
-    Reg#(Sample_Type) accumError <- mkReg(0);
-    Reg#(FixedPoint#(15, 16)) fsError <- mkReg(0);
+    Vector#(64, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
+    FIFO#(COMPLEX_SAMPLE_TYPE) newSample <- mkFIFO;
+    Reg#(COMPLEX_SAMPLE_TYPE) lastSample <-mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) currSample <-mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) accumError <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) fsError <- mkReg(0);
     
-    Reg#(FixedPoint#(15, 16)) xFix <- mkReg(1.0);
-    Reg#(FixedPoint#(15, 16)) yFix <- mkReg(0.0);
+    Reg#(REAL_SAMPLE_TYPE) xFix <- mkReg(1.0);
+    Reg#(REAL_SAMPLE_TYPE) yFix <- mkReg(0.0);
 
     Reg#(UInt#(8)) n <- mkReg(0);
 
@@ -140,11 +139,11 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
         coarseErrorCalc.start;
     endrule
 
-    method Action addSample (Sample_Type sample);
+    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
         newSample.enq(sample);
     endmethod
 
-    method ActionValue #(FixedPoint#(15, 16)) getError;
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
         coarseErrorCalc.waitTillDone();
         return fsError;
     endmethod
