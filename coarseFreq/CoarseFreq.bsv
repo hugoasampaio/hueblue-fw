@@ -12,11 +12,10 @@ import Constants::*;
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 
-
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
-Integer loopFix = 56;
+Integer loopFix = 8 * sps;
 
 interface CoarseFreq_IFC;
     method Action addSample (COMPLEX_SAMPLE_TYPE sample);
@@ -25,7 +24,7 @@ interface CoarseFreq_IFC;
 endinterface: CoarseFreq_IFC
 
 //based on understanding dsp equation
-function FixedPoint#(15, CBDATASIZE) atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
+function REAL_SAMPLE_TYPE atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
  
     REAL_SAMPLE_TYPE xAbs = x;
     REAL_SAMPLE_TYPE yAbs = y;
@@ -82,10 +81,10 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
 
     Reg#(UInt#(8)) n <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, 'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, 'hfffff);
 
     Cordic_IFC cordic <- mkRotate;
 
@@ -108,12 +107,24 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
             accumError.rel.f <= accumError.rel.f & limitAccumE;
             accumError.img.f <= accumError.img.f & limitAccumE;
 
+            /*
+            fxptWrite(6, accumError.rel);
+            $write(", ");
+            fxptWrite(6, accumError.img);
+            $display(" ");
+            */
             lastSample <= currSample;
             samples[n] <= currSample;
         endseq
-
+        // 1/(2*pi)
         fsError <=  0.159155 * atan(accumError.rel, accumError.img);
         fsError.f <= fsError.f & limitError;
+
+        /*
+        $write("fs: ");
+        fxptWrite(6, fsError);
+        $display(" ");
+        */
 
         for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             samples[n] <= samples[n] * cmplx(xFix, yFix);

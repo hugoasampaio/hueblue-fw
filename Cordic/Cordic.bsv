@@ -5,16 +5,14 @@ import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
 import CBus::*;
-
-typedef 8    CBADDRSIZE; //size of configuration address bus to decode
-typedef 16   CBDATASIZE; //size of configuration data bus
+import Constants::*;
 
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCordic;
 
 Integer nAngles = 14;
 
-FixedPoint#(15, CBDATASIZE) angles[nAngles] = {
+REAL_SAMPLE_TYPE angles[nAngles] = {
     0.7853981634,           //2^0
     0.46364760905065,       //2^-1
     0.24497866316245,       //2^-2
@@ -31,23 +29,23 @@ FixedPoint#(15, CBDATASIZE) angles[nAngles] = {
     0.00012207031755953    //2^-13
 };
 
-FixedPoint#(15, CBDATASIZE) kForNinety = 0.70712;
+REAL_SAMPLE_TYPE kForNinety = 0.70712;
 
 interface Cordic_IFC;
-    method Action setPolar(FixedPoint#(15, 16) x, FixedPoint#(15, 16) y, FixedPoint#(15, 16) z);
-    method ActionValue #(FixedPoint#(15, 16)) getX();
-    method ActionValue #(FixedPoint#(15, 16)) getY();
+    method Action setPolar(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y, REAL_SAMPLE_TYPE z);
+    method ActionValue #(REAL_SAMPLE_TYPE) getX();
+    method ActionValue #(REAL_SAMPLE_TYPE) getY();
 endinterface: Cordic_IFC
 
 module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(UInt#(4)) n <- mkReg(0);
-    Reg#(FixedPoint#(15, CBDATASIZE)) x_ <- mkReg(0);
-    Reg#(FixedPoint#(15, CBDATASIZE)) y_ <- mkReg(0);
-    Reg#(FixedPoint#(15, CBDATASIZE)) z_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) z_ <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0},  'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd5, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, 'hfffff);
 
     Stmt cordicFSM = seq
         //45 degree
@@ -86,7 +84,9 @@ module [LimitedOps] mkRotate (Cordic_IFC);
 
     FSM atanCalc <- mkFSM(cordicFSM);
 
-    method Action setPolar(FixedPoint#(15, 16) x, FixedPoint#(15, 16) y, FixedPoint#(15, 16) z);
+    method Action setPolar(REAL_SAMPLE_TYPE x, 
+    REAL_SAMPLE_TYPE y, 
+    REAL_SAMPLE_TYPE z);
         atanCalc.waitTillDone();
         x_ <= x;
         y_ <= y;
@@ -94,13 +94,13 @@ module [LimitedOps] mkRotate (Cordic_IFC);
         atanCalc.start;
     endmethod
 
-    method ActionValue #(FixedPoint#(15, 16)) getX();
+    method ActionValue #(REAL_SAMPLE_TYPE) getX();
         atanCalc.waitTillDone();
         return (x_ * 0.607253);
         //return x_;
     endmethod
 
-    method ActionValue #(FixedPoint#(15, 16)) getY();
+    method ActionValue #(REAL_SAMPLE_TYPE) getY();
         atanCalc.waitTillDone();
         return (y_ * 0.607253);
         //return y_;

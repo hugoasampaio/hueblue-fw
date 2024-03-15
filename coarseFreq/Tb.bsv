@@ -32,12 +32,12 @@ module mkTb (Empty);
 		accumV <= lr.result;
 		lr.start;
 		errorV <= lr.result;
-		coarseFreq.cbus_ifc.write(11, 16'hffff << currV.i);
-		coarseFreq.cbus_ifc.write(12, 16'hffff << lastV.i);
-		coarseFreq.cbus_ifc.write(13, 16'hffff << accumV.i);
-		coarseFreq.cbus_ifc.write(14, 16'hffff << errorV.i);
+		coarseFreq.cbus_ifc.write(11, 20'hfffff << currV.i);
+		coarseFreq.cbus_ifc.write(12, 20'hfffff << lastV.i);
+		coarseFreq.cbus_ifc.write(13, 20'hfffff << accumV.i);
+		coarseFreq.cbus_ifc.write(14, 20'hfffff << errorV.i);
 		
-		for (m <= 0; m < 2; m <= m+1) seq
+		for (m <= 0; m < 9; m <= m+1) seq
 			for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 				lr.start;
 				realValue <= lr.result;

@@ -13,13 +13,14 @@ def sqnr(signal: np.array, quantized_signal: np.array) -> float:
         sqnr = 10*np.log10(p_signal/p_noise)
         return sqnr
 
+samples_from_bsv = 288
 sps = 4 #samples per symbol
 fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
 def gen_signal():
-    num_symbols = int(14*fsamples)
+    num_symbols = int(8*8*fsamples)
     in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
     x = np.array([])
@@ -46,8 +47,9 @@ def gen_signal():
     h *= np.hamming(N) # window the filter to make sure it decays to 0 on both sides
     h /= np.sum(h) # normalize to get unity gain, we don't want to change the amplitude/power
     rx_signal = np.convolve(tx_signal, h) # apply filter
+
     #rx - step 2: freq offset from different LO
-    fo = fsamples*0.28 #freq offset in %
+    fo = fsamples*0.25 #freq offset in %
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
     return rx_fo_delay
@@ -69,7 +71,7 @@ def perform_estimation_n_fix(rx_signal: np.array):
         conj_log.append(conj)
         err_log.append(err_)
         #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
-        if sum > 14*sps:
+        if sum > 8*sps:
             #print(((sps/2)/(np.pi*Tsymbol)))
             error = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
             #print(error)
@@ -122,7 +124,7 @@ def simulation_step(curr_limiter: int, last_limiter: int,
 
     #read values from bittrue simulation
     index = 0
-    coarse_freq_corrected_bsv = np.zeros(112, dtype=complex)
+    coarse_freq_corrected_bsv = np.zeros(samples_from_bsv, dtype=complex)
     bsv_file = open("log/dnm-sim-bsv.log", "r")
     for line in bsv_file:
         number = line.split(",")
@@ -138,21 +140,22 @@ def simulation_step(curr_limiter: int, last_limiter: int,
     print("c:", curr_limiter,  "l:", last_limiter, 
           "a:", accum_limiter, "e:", error_limiter, 
           " sqnr: ", 
-          sqnr(reference_signal[0:112], coarse_freq_corrected_bsv[0:112]))
-    #plt.figure(1)
-    #plt.plot(reference_signal.real, '.-')
-    #plt.plot(reference_signal.imag,'.-')
+          sqnr(reference_signal[0:samples_from_bsv-1], 
+               coarse_freq_corrected_bsv[0:samples_from_bsv-1]))
+    plt.figure(1)
+    plt.plot(reference_signal.real, '.-')
+    plt.plot(reference_signal.imag,'.-')
 
-    #plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-    #plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-    #plt.show()
+    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    plt.show()
 
 base_signal  =  gen_signal()
 fixed_signal =  perform_estimation_n_fix(base_signal)
-for curr in range(13):
-    for last in range (13):
-        for accum in range(13):
-            for error in range(13):
-                simulation_step(curr, last, accum, error, base_signal, fixed_signal)
-#simulation_step(0, 0, 0, 0, base_signal, fixed_signal)
+#for curr in range(13):
+#    for last in range (13):
+#        for accum in range(13):
+#            for error in range(13):
+#                simulation_step(curr, last, accum, error, base_signal, fixed_signal)
+simulation_step(0, 0, 0, 0, base_signal, fixed_signal)
 #simulation_step(8, 8, 5, 4, base_signal, fixed_signal)
