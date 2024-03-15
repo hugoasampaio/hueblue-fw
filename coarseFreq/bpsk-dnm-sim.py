@@ -18,7 +18,7 @@ fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-def simulation_step(i: int):
+def gen_signal():
     num_symbols = int(14*fsamples)
     in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
 
@@ -35,8 +35,8 @@ def simulation_step(i: int):
     tx_signal = np.convolve(x, hsrrc)
 
     #AWGN 
-    #n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
-    #tx_signal = tx_signal + n/100
+    n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
+    tx_signal = tx_signal + n/100
 
     #delay pre RX
     delay = 0.1 # fractional delay, in samples
@@ -45,10 +45,12 @@ def simulation_step(i: int):
     h = np.sinc(n - delay) # calc filter taps
     h *= np.hamming(N) # window the filter to make sure it decays to 0 on both sides
     h /= np.sum(h) # normalize to get unity gain, we don't want to change the amplitude/power
-    tx_delayed_signal = np.convolve(tx_signal, h) # apply filter
+    delayed_n_shifted_signal = np.convolve(tx_signal, h) # apply filter
+    return delayed_n_shifted_signal
 
-    #rx - step 1: matched filter
-    rx_signal = tx_delayed_signal
+def simulation_step(curr_limiter: int, last_limiter: int, 
+                    accum_limiter: int, error_limiter: int,
+                    rx_signal: np.array):
 
     #rx - step 2: freq offset from different LO
     fo = fsamples*0.28 #freq offset in %
@@ -58,7 +60,7 @@ def simulation_step(i: int):
     #print values to run bittrue simulation on bsv
     stdout_fd = sys.stdout
     sys.stdout = open("log/dnm-sim-py.log", "w")
-    print(f'{i}.0')
+    print(f'{curr_limiter}.0, {last_limiter}.0, {accum_limiter}.0, {error_limiter}.0')
     for datum in rx_fo_delay:
         print("{:.6f}".format(datum.real), 
             ",", 
@@ -128,14 +130,23 @@ def simulation_step(i: int):
     #for i in range(30, 40):
     #    print("py: ", coarse_freq_corrected_python[i], " bsv: ", coarse_freq_corrected_bsv[i])
 
-    print(i, "bits shifted, sqnr: ", sqnr(coarse_freq_corrected_python[0:112], coarse_freq_corrected_bsv[0:112]))
-    #plt.figure(i)
-    #plt.plot( coarse_freq_corrected_python.real, '.-')
-    #plt.plot(coarse_freq_corrected_python.imag,'.-')
+    print("c:", curr_limiter,  "l:", last_limiter, 
+          "a:", accum_limiter, "e:", error_limiter, 
+          " sqnr: ", 
+          sqnr(coarse_freq_corrected_python[0:112], coarse_freq_corrected_bsv[0:112]))
+    plt.figure(1)
+    plt.plot( coarse_freq_corrected_python.real, '.-')
+    plt.plot(coarse_freq_corrected_python.imag,'.-')
 
-    #plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-    #plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-    #plt.show(block=False)
+    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    plt.show()
 
-for i in range(10):
-    simulation_step(i)
+base_signal = gen_signal()
+
+#for curr in range(9):
+#    for last in range (9):
+#        for accum in range(9):
+#            for error in range(9):
+#                simulation_step(curr, last, accum, error, base_signal)
+simulation_step(8, 8, 5, 4, base_signal)
