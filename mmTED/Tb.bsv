@@ -5,121 +5,123 @@ import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
 import CBus::*;
+import Constants::*;
 
 (* synthesize *)
 module mkTb (Empty);
     IWithCBus#(LimitedMMTED, MMTED_IFC) mmTed <- exposeCBusIFC(mkMMTED);
+    LineReader lr <- mkLineReader;
+
+    Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
+
+    Reg#(REAL_SAMPLE_TYPE) xV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) muV <-mkReg(0);
+
+    Reg#(UInt#(10)) n <- mkReg(0);
+	Reg#(UInt#(6)) m <- mkReg(0);
  
     Stmt test = seq
-        mmTed.device_ifc.addSample(cmplx(0.00000045 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000063 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000176 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000105 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000404 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000582 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000486 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00001356 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00001463 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00002411 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00005032 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00060910 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00006652 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00063801 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00247127 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00231275 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00030051 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00447211 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00813003 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00519995 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00004130 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00104713 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00758543 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.01650484 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00382114 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.05110755 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.12753011 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.15057974 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.02356299 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.28862881 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.70031729 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.01521421 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.02095187 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.63395561 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.02441158 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.66884167 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.99340829 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.84519362 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.29898719 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.39654926 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.95945283 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.22849398 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.21996377 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.08610143 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.00061948 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.05329518 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.19003194 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.24266932 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.03865105 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.51862961 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.18542223 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.78956960 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-1.00554118 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.71469196 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.05891549 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.62431948 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.98971031 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.86987467 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.34365957 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.34615171 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.95104756 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-1.32933262 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-1.45512862 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-1.35307716 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-1.04180801 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.54267257 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.06757424 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.63496489 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.98227945 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(1.00723280 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.74708594 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.35827650 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.02450761 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.14432827 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.15123293 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.07592963 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00464254 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.02283014 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.01597087 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00258442 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00014104 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00512518 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00828380 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00550764 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00040432 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00273708 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00272784 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00099175 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00002388 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000417 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000044 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000458 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000267 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000126 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000127 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000126 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000076 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(-0.00000000 , -0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000000 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000000 , 0.00000000));
-        mmTed.device_ifc.addSample(cmplx(0.00000000 , 0.00000000));
-        $write("timing error: ");
-        action
-        let err <-mmTed.device_ifc.getError;
-        fxptWrite(5,err);
-        endaction
-        $display("  ");
+		lr.start;
+		xV <= lr.result;
+		lr.start;
+		yV <= lr.result;
+		lr.start;
+		muV <= lr.result;
+
+		mmTed.cbus_ifc.write(5, 20'hfffff << xV.i);
+		mmTed.cbus_ifc.write(6, 20'hfffff << yV.i);
+		mmTed.cbus_ifc.write(7, 20'hfffff << muV.i);
+
+		for (n <= 0; n < 340; n <= n+1) seq
+			lr.start;
+			realValue <= lr.result;
+			lr.start;
+			imagValue <= lr.result;
+			mmTed.device_ifc.addSample(cmplx(realValue, imagValue));
+		endseq
+		action
+		let err <- mmTed.device_ifc.getError;
+		//fxptWrite(5,err);
+		//$display(" ");
+		//coarseFreq.device_ifc.getError;
+		endaction
     endseq;
     mkAutoFSM(test);
     
 endmodule: mkTb
+
+/*----------------------------------------------------------------------------------------*/
+
+interface LineReader;
+	method Action start;
+	method REAL_SAMPLE_TYPE result;
+endinterface
+
+REAL_SAMPLE_TYPE fracDigits[8] = {
+		0.1,
+		0.01,
+		0.001,
+		0.0001,
+		0.00001,
+		0.000001,
+		0.0000001,
+		0.00000001
+};
+
+module mkLineReader(LineReader);
+	function ord(s) = fromInteger(charToInteger(stringHead(s)));
+
+	Reg#(Int#(7)) c <- mkRegU;
+	Reg#(REAL_SAMPLE_TYPE) number <-mkReg(0.0);
+	Reg#(UInt#(3)) fracDigit <- mkReg(0);
+
+	Reg#(Bool) dot <- mkReg(False);
+	Reg#(Bool) neg <- mkReg(False);
+
+	FSM fsm <- mkFSM(seq
+		dot <= False;
+		neg <= False;
+		fracDigit <= 0;
+		number <= 0.0;
+		while (True) seq
+			action
+			let cin <- $fgetc(stdin);
+			if (cin == -1) begin
+				$display("Unexpected EOF");
+				$finish(1);
+			end
+			c <= truncate(cin);
+			endaction
+
+			
+			if (c == ord(",") || c == ord("\n") || c == 13) seq
+				if (neg == True) number <= number * -1.0;
+				break;
+			endseq
+
+			if (c > ord("9")) break;
+
+			action
+				case (c)
+					ord("."): dot <= True;
+					ord("-"): neg <= True;
+					ord("0"),ord("1"),ord("2"),ord("3"),ord("4"),ord("5"),ord("6"),ord("7"),ord("8"),ord("9"): begin
+						if(dot == False) number <= number * 10 + fromInt(c - 48);
+						else action
+							number <= number + fxptTruncate(fracDigits[fracDigit] * fromInt(c - 48));
+							fracDigit <= fracDigit + 1;
+						endaction					
+						end
+					default: noAction;
+				endcase
+			endaction
+		endseq
+	endseq);
+
+	method start = fsm.start;
+	method result if (fsm.done) = number;
+
+endmodule: mkLineReader
 endpackage: Tb

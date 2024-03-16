@@ -6,47 +6,44 @@ import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
 import CBus::*;
+import Constants::*;
 
-typedef 8    CBADDRSIZE; //size of configuration address bus to decode
-typedef 16   CBDATASIZE; //size of configuration data bus
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedMMTED;
 
-typedef FixedPoint#(7, 16)      SampleType;
-typedef Complex#(SampleType)    ComplexSampleType;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 
 interface MMTED_IFC;
-    method Action addSample (ComplexSampleType sample);
-    method ActionValue #(SampleType) getError;
+    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
 endinterface: MMTED_IFC
 
 module [LimitedOps] mkMMTED (MMTED_IFC);
 
-    Reg#(SampleType) mu <-mkReg(0);
-    Vector#(64, Reg#(ComplexSampleType)) samples <- replicateM(mkReg(0));
-    Vector#(74, Reg#(ComplexSampleType)) out  <- replicateM(mkReg(0));
-    Vector#(74, Reg#(ComplexSampleType)) outRail  <- replicateM(mkReg(0));
-    Reg#(UInt#(7)) iIn <- mkReg(0);
-    Reg#(UInt#(7)) iOut <- mkReg(2);
-    Reg#(UInt#(7)) n <- mkReg(0);
-    Reg#(ComplexSampleType) x <- mkReg(0);
-    Reg#(ComplexSampleType) y <- mkReg(0);
-    FIFO#(ComplexSampleType) newSample <- mkFIFO;
-    Reg#(SampleType) mmVal <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) mu <-mkReg(0);
+    Vector#(340, Reg#(COMPLEX_SAMPLE_TYPE)) samples <- replicateM(mkReg(0));
+    Vector#(350, Reg#(COMPLEX_SAMPLE_TYPE)) out  <- replicateM(mkReg(0));
+    Vector#(350, Reg#(COMPLEX_SAMPLE_TYPE)) outRail  <- replicateM(mkReg(0));
+    Reg#(UInt#(12)) iIn <- mkReg(0);
+    Reg#(UInt#(12)) iOut <- mkReg(2);
+    Reg#(UInt#(12)) n <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) x <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) y <- mkReg(0);
+    FIFO#(COMPLEX_SAMPLE_TYPE) newSample <- mkFIFO;
+    Reg#(REAL_SAMPLE_TYPE) mmVal <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd6, o:0},  'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitMu <- mkCBRegRW(CRAddr{a: 8'd7, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd6, o:0},  'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitMu <- mkCBRegRW(CRAddr{a: 8'd7, o:0},  'hfffff);
 
     Stmt calcError = seq
-        for (n <= 0; n < 64; n <= n+1) seq
+        for (n <= 0; n < 340; n <= n+1) seq
             samples[n] <= newSample.first;
             newSample.deq;
         endseq
-        while (iOut < 64 && iIn+16 < 64) seq
+        while (iOut < 340 && iIn+16 < 340) seq
             out[iOut] <= samples[iIn];
             outRail[iOut] <= cmplx( (out[iOut].rel > 0.0 ? 1.0 : 0.0) ,  (out[iOut].img > 0.0 ? 1.0 : 0.0));
             x <= (outRail[iOut] - outRail[iOut -2]) * (outRail[iOut-1] * cmplx(1.0, -1.0));
@@ -65,20 +62,27 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             mu.f <= mu.f & limitMu;
             iOut <= iOut + 1;
         endseq
+        for (n <= 2; n < iOut; n <= n +1 ) action
+            fxptWrite(6, out[n].rel);
+            $write(", ");
+            fxptWrite(6, out[n].img);
+            $display(" ");
+        endaction
 
     endseq;
 
-    FSM coarseErrorCalc <- mkFSM(calcError);
+    FSM tedErrorCalc <- mkFSM(calcError);
 
     rule init;
-        coarseErrorCalc.start;
+        tedErrorCalc.start;
     endrule
 
-    method Action addSample (ComplexSampleType sample);
+    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
         newSample.enq(sample);
     endmethod
 
-    method ActionValue #(SampleType) getError;
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
+        tedErrorCalc.waitTillDone();
         return mu;
     endmethod
 
