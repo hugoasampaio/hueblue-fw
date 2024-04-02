@@ -7,33 +7,30 @@ import StmtFSM::*;
 import FixedPoint::*;
 import Cordic::*;
 import CBus::*;
+import Constants::*;
 
-typedef 8    CBADDRSIZE; //size of configuration address bus to decode
-typedef 16   CBDATASIZE; //size of configuration data bus
 typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
 typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCostasLoop;
 
-typedef FixedPoint#(7, 16)      SampleType;
-typedef Complex#(SampleType)    ComplexSampleType;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 
 interface CostasLoop_IFC;
-    method Action addSample (ComplexSampleType ns);
-    method ActionValue #(ComplexSampleType) getFixedSample;
-    method ActionValue #(SampleType) getError;
+    method Action addSample (COMPLEX_SAMPLE_TYPE ns);
+    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSample;
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
 endinterface: CostasLoop_IFC
 
 module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
 
-    FIFO#(ComplexSampleType) inSample <- mkFIFO;
-    FIFO#(ComplexSampleType) outSample <- mkFIFO;
-    Reg#(ComplexSampleType) sample <- mkReg(0);
+    FIFO#(COMPLEX_SAMPLE_TYPE) inSample <- mkFIFO;
+    FIFO#(COMPLEX_SAMPLE_TYPE) outSample <- mkFIFO;
+    Reg#(COMPLEX_SAMPLE_TYPE) sample <- mkReg(0);
 
-    Reg#(SampleType) phase <- mkReg(0);
-    Reg#(SampleType) freq <- mkReg(0);
-    Reg#(SampleType) error <- mkReg(0);  
+    Reg#(REAL_SAMPLE_TYPE) phase <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) freq <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) error <- mkReg(0);  
 
     Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd8, o:0}, 'hffff);
     Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd9, o:0},  'hffff);
@@ -77,17 +74,17 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
         costasL.start;
     endrule
 
-    method Action addSample (ComplexSampleType ns);
+    method Action addSample (COMPLEX_SAMPLE_TYPE ns);
         inSample.enq(ns);
     endmethod
 
-    method ActionValue #(ComplexSampleType) getFixedSample;
+    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSample;
         let ret = outSample.first;
         outSample.deq;
         return ret;
     endmethod
 
-    method ActionValue #(SampleType) getError;
+    method ActionValue #(REAL_SAMPLE_TYPE) getError;
         return error;
     endmethod
 
