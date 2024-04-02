@@ -46,8 +46,8 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
         while (iOut < 340 && iIn+16 < 340) seq
             out[iOut] <= samples[iIn];
             outRail[iOut] <= cmplx( (out[iOut].rel > 0.0 ? 1.0 : 0.0) ,  (out[iOut].img > 0.0 ? 1.0 : 0.0));
-            x <= (outRail[iOut] - outRail[iOut -2]) * (outRail[iOut-1] * cmplx(1.0, -1.0));
-            y <= (out[iOut] - out[iOut -2]) * (outRail[iOut-1] * cmplx(1.0, -1.0));
+            x <= (outRail[iOut] - outRail[iOut-2]) * (outRail[iOut-1] * cmplx(1.0, -1.0));
+            y <= (out[iOut] - out[iOut-2]) * (outRail[iOut-1] * cmplx(1.0, -1.0));
 
             //apply limits
             x.rel.f <= x.rel.f & limitX;
@@ -56,19 +56,19 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             y.img.f <= y.img.f & limitY;
 
             mmVal <= y.rel-x.rel;
-            mu <= mu + fromInteger(sps) + 0.3 * mmVal;
+            mu <= mu + fromInteger(sps) + (0.3 * mmVal);
             iIn <= iIn + unpack(mu.i);
             mu.i <= 0;
             mu.f <= mu.f & limitMu;
             iOut <= iOut + 1;
         endseq
+        //$display("iout: ", iOut);
         for (n <= 2; n < iOut; n <= n +1 ) action
             fxptWrite(6, out[n].rel);
             $write(", ");
             fxptWrite(6, out[n].img);
             $display(" ");
         endaction
-
     endseq;
 
     FSM tedErrorCalc <- mkFSM(calcError);

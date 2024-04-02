@@ -151,13 +151,15 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
 
     #read values from bittrue simulation
     index = 0
-    mmted_corrected_bsv = np.zeros(samples_from_bsv, dtype=complex)
+    mmted_corrected_bsv = np.zeros(samples_from_bsv+5, dtype=complex)
     bsv_file = open("log/mmted-sim-bsv.log", "r")
     for line in bsv_file:
         number = line.split(",")
         cmplx = complex(float(number[0]), float(number[1]))
         mmted_corrected_bsv[index] = cmplx
         index += 1
+        if index > samples_from_bsv:
+            break
     bsv_file.close()
     #compare to python values
 
@@ -171,17 +173,18 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
     plt.figure(3)
     plt.plot(reference_signal.real, '.-')
     plt.plot(reference_signal.imag,'.-')
-    #plt.figure(4)
+    plt.figure(4)
     plt.plot(mmted_corrected_bsv.real,'.-') 
     plt.plot(mmted_corrected_bsv.imag, '.-')
     plt.show()
 
 base_signal  =  perform_estimation_n_fix(gen_signal())
 fixed_signal =  mmted(base_signal)
-#for curr in range(13):
-#    for last in range (13):
-#        for accum in range(13):
-#            for error in range(13):
-#                simulation_step(curr, last, accum, error, base_signal, fixed_signal)
+#for x in range(12):
+#    for y in range (12):
+#        for mu in range(12):
+#           simulation_step(x, y, mu, base_signal, fixed_signal)
 simulation_step(0, 0, 0, base_signal, fixed_signal)
-#simulation_step(8, 8, 5, 4, base_signal, fixed_signal)
+simulation_step(8, 8, 8,  base_signal, fixed_signal)
+simulation_step(11, 11, 11,  base_signal, fixed_signal)
+simulation_step(16, 16, 16,  base_signal, fixed_signal)
