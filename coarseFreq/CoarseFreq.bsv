@@ -15,7 +15,7 @@ typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
-Integer loopFix = 8 * sps;
+Integer loopFix = 445;
 
 interface CoarseFreq_IFC;
     method Action addSample (COMPLEX_SAMPLE_TYPE sample);
@@ -69,7 +69,7 @@ function REAL_SAMPLE_TYPE atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
 endfunction: atan
 
 module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
-    Vector#(64, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
+    Vector#(446, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
     FIFO#(COMPLEX_SAMPLE_TYPE) newSample <- mkFIFO;
     Reg#(COMPLEX_SAMPLE_TYPE) lastSample <-mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) currSample <-mkReg(0);
@@ -79,12 +79,15 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Reg#(REAL_SAMPLE_TYPE) xFix <- mkReg(1.0);
     Reg#(REAL_SAMPLE_TYPE) yFix <- mkReg(0.0);
 
-    Reg#(UInt#(8)) n <- mkReg(0);
+    Reg#(UInt#(10)) n <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, 'hfffff);
-    Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, 'hfffff);
-    Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, 'hfffff);
-    Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitCurrS  <- mkCBRegRW(CRAddr{a: 8'd11, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitLastS  <- mkCBRegRW(CRAddr{a: 8'd12, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitAccumE <- mkCBRegRW(CRAddr{a: 8'd13, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitError  <- mkCBRegRW(CRAddr{a: 8'd14, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitCpxFix <- mkCBRegRW(CRAddr{a: 8'd15, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitXFix   <- mkCBRegRW(CRAddr{a: 8'd16, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitYFix   <- mkCBRegRW(CRAddr{a: 8'd17, o:0}, fromInteger(cleanMask));
 
     Cordic_IFC cordic <- mkRotate;
 
@@ -94,11 +97,25 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
         accumError <= cmplx(0,0);
         fsError    <= 0;
         for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
-            currSample <= newSample.first;
+            samples[n] <= newSample.first;
             newSample.deq;
+        endseq
+        for (n <= 30; n < (30+16*fromInteger(sps)); n <= n+1) seq
+            currSample <= samples[n];
+            /*
+            $write(currSample.rel.f);
+            $write(", ");
+            $write(currSample.img.f);
+            $display(" a");
+            */
             currSample.rel.f <= currSample.rel.f & limitCurrS;
             currSample.img.f <= currSample.img.f & limitCurrS;
-
+            /*
+            $write(currSample.rel.f);
+            $write(", ");
+            $write(currSample.img.f);
+            $display(" d");
+            */
             lastSample.img <=  lastSample.img * -1.0; //conjugado
             lastSample.rel.f <= lastSample.rel.f & limitLastS;
             lastSample.img.f <= lastSample.img.f & limitLastS;
@@ -128,6 +145,8 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
 
         for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             samples[n] <= samples[n] * cmplx(xFix, yFix);
+            samples[n].rel.f <= samples[n].rel.f & limitCpxFix;
+            samples[n].img.f <= samples[n].img.f & limitCpxFix; 
             cordic.setPolar(xFix, yFix, -2.0 * 3.141593 * fsError);
             action
             let x_rot <- cordic.getX;
@@ -135,6 +154,8 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
             xFix <= x_rot;
             yFix <= y_rot;
             endaction
+            xFix.f <= xFix.f & limitXFix;
+            yFix.f <= yFix.f & limitYFix;
             action
             fxptWrite(6, samples[n].rel);
             $write(", ");

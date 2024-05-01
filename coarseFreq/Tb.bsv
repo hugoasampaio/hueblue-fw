@@ -19,9 +19,11 @@ module mkTb (Empty);
 	Reg#(REAL_SAMPLE_TYPE) lastV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) accumV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) errorV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) cpxfixV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) xFixV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yFixV <-mkReg(0);
 
-    Reg#(UInt#(8)) n <- mkReg(0);
-	Reg#(UInt#(6)) m <- mkReg(0);
+    Reg#(UInt#(10)) n <- mkReg(0);
  
     Stmt test = seq
 		lr.start;
@@ -32,26 +34,34 @@ module mkTb (Empty);
 		accumV <= lr.result;
 		lr.start;
 		errorV <= lr.result;
-		coarseFreq.cbus_ifc.write(11, 20'hfffff << currV.i);
-		coarseFreq.cbus_ifc.write(12, 20'hfffff << lastV.i);
-		coarseFreq.cbus_ifc.write(13, 20'hfffff << accumV.i);
-		coarseFreq.cbus_ifc.write(14, 20'hfffff << errorV.i);
+		lr.start;
+		cpxfixV <= lr.result;
+		lr.start;
+		xFixV <= lr.result;
+		lr.start;
+		yFixV <= lr.result;
+
+		coarseFreq.cbus_ifc.write(11, fromInteger(cleanMask) << currV.i);
+		coarseFreq.cbus_ifc.write(12, fromInteger(cleanMask) << lastV.i);
+		coarseFreq.cbus_ifc.write(13, fromInteger(cleanMask) << accumV.i);
+		coarseFreq.cbus_ifc.write(14, fromInteger(cleanMask) << errorV.i);
+		coarseFreq.cbus_ifc.write(15, fromInteger(cleanMask) << cpxfixV.i);
+		coarseFreq.cbus_ifc.write(16, fromInteger(cleanMask) << xFixV.i);
+		coarseFreq.cbus_ifc.write(17, fromInteger(cleanMask) << yFixV.i);
 		
-		for (m <= 0; m < 9; m <= m+1) seq
-			for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
-				lr.start;
-				realValue <= lr.result;
-				lr.start;
-				imagValue <= lr.result;
-				coarseFreq.device_ifc.addSample(cmplx(realValue, imagValue));
-			endseq
-			action
-			let err <- coarseFreq.device_ifc.getError;
-			//fxptWrite(5,err);
-			//$display(" ");
-			//coarseFreq.device_ifc.getError;
-			endaction
+		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
+			lr.start;
+			realValue <= lr.result;
+			lr.start;
+			imagValue <= lr.result;
+			coarseFreq.device_ifc.addSample(cmplx(realValue, imagValue));
 		endseq
+		action
+		let err <- coarseFreq.device_ifc.getError;
+		//fxptWrite(5,err);
+		//$display(" ");
+		//coarseFreq.device_ifc.getError;
+		endaction
     endseq;
     mkAutoFSM(test);
     

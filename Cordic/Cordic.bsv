@@ -43,9 +43,9 @@ module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) z_ <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, 'hfffff);
-    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0}, 'hfffff);
-    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, 'hfffff);
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, fromInteger(cleanMask));
 
     Stmt cordicFSM = seq
         //45 degree
