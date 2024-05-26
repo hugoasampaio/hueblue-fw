@@ -1,14 +1,10 @@
-package Cordic;
+package Cordic_optimal;
 
 import Vector::*;
 import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
-import CBus::*;
 import Constants::*;
-
-typedef ModWithCBus#(CBADDRSIZE, CBDATASIZE, j)         LimitedOps#(type j);
-typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCordic;
 
 Integer nAngles = 14;
 
@@ -37,7 +33,7 @@ interface Cordic_IFC;
     method ActionValue #(REAL_SAMPLE_TYPE) getY();
 endinterface: Cordic_IFC
 
-module [LimitedOps] mkRotate (Cordic_IFC);
+module mkRotate (Cordic_IFC);
     Reg#(UInt#(4)) n <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
@@ -45,10 +41,6 @@ module [LimitedOps] mkRotate (Cordic_IFC);
     FIFO#(REAL_SAMPLE_TYPE) ix <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) iy <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) iz <- mkFIFO;
-
-    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd3, o:0}, fromInteger(cleanMask));
-    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd4, o:0}, fromInteger(cleanMask));
-    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd5, o:0}, fromInteger(cleanMask));
 
     Stmt cordicFSM = seq
         x_ <= ix.first;
@@ -82,12 +74,6 @@ module [LimitedOps] mkRotate (Cordic_IFC);
                 z_ <= z_ + angles[n];
             end
             endaction
-
-            action
-            x_.f <= x_.f & limitX;
-            y_.f <= y_.f & limitY;
-            z_.f <= z_.f & limitZ;
-            endaction
         endseq
     endseq;
 
@@ -114,28 +100,5 @@ module [LimitedOps] mkRotate (Cordic_IFC);
         //return y_;
     endmethod
 
-endmodule
-endpackage : Cordic
-
-/*    
-    if (y_ > 0) begin
-    x_ <= x_ + (y_ >> n);
-    y_ <= y_ - (x_ >> n);
-    sumAngle <= sumAngle + angles[n];
-    end
-    else begin
-    x_ <= x_ - (y_ >> n);
-    y_ <= y_ + (x_ >> n);
-    sumAngle <= sumAngle - angles[n];
-    end
-
-if (z > 1.570796) begin
-            bigAngle<= True;
-            z_ <= z - 2*(z - 1.570796);
-        end else if (z < (-1.570796)) begin
-            bigAngle<= True;
-            z_ <= z + 2*(z + 1.570796);
-        end else
-
-
-*/
+endmodule: mkRotate
+endpackage : Cordic_optimal

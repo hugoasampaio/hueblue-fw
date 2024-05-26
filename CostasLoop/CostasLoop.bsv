@@ -32,9 +32,9 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
     Reg#(REAL_SAMPLE_TYPE) freq <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) error <- mkReg(0);  
 
-    Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd8, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd9, o:0},  'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd10, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd8, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd9, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd10, o:0},fromInteger(cleanMask));
 
     Cordic_IFC fixFxError <- mkRotate;
     

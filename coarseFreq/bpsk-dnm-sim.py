@@ -1,5 +1,4 @@
 import os
-import sys
 import math
 import time
 import numpy as np
@@ -8,9 +7,8 @@ from scipy import signal
 import commpy.filters as filter
 from threading import Thread
 
-
 print(time.ctime())
-ITERATIONS = 1000
+ITERATIONS = 100
 base_signal = [0] * ITERATIONS
 fixed_signal = [0] * ITERATIONS
 snr_log = [0] * ITERATIONS
@@ -201,7 +199,7 @@ print("mean:", "{:.3f}".format(log.mean()),
                "WL:", 6, 6, 3, 9, 3, 2)
 
 print(time.ctime())
-#best:
+#best
 #mean: 14.235 std: 1.584 WL: 6 6 3 0 9 3 2
 #simulated annealing
 

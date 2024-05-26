@@ -31,11 +31,11 @@ module mkTb (Empty);
 		lr.start;
 		frV <= lr.result;
 
-		cc.cbus_ifc.write(8, 20'hfffff << phV.i);
-		cc.cbus_ifc.write(9, 20'hfffff << errV.i);
-		cc.cbus_ifc.write(10, 20'hfffff << frV.i);
+		cc.cbus_ifc.write(8, fromInteger(cleanMask) << phV.i);
+		cc.cbus_ifc.write(9, fromInteger(cleanMask) << errV.i);
+		cc.cbus_ifc.write(10, fromInteger(cleanMask) << frV.i);
 
-        for (n<=0; n < 83; n <= n+1) seq
+        for (n<=0; n < 106; n <= n+1) seq
             lr.start;
 			realValue <= lr.result;
 			lr.start;
@@ -43,9 +43,9 @@ module mkTb (Empty);
             cc.device_ifc.addSample(cmplx(realValue , imagValue));
             action
             let fix <- cc.device_ifc.getFixedSample;
-            fxptWrite(5, fix.rel);
+            fxptWrite(6, fix.rel);
             $write(", ");
-            fxptWrite(5, fix.img);
+            fxptWrite(6, fix.img);
             $display("  ");
             endaction
         endseq

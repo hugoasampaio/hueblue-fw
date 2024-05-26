@@ -1,6 +1,6 @@
 package Tb;
 
-import MMTED::*;
+import BPSK_receiver::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
@@ -9,11 +9,19 @@ import Constants::*;
 
 (* synthesize *)
 module mkTb (Empty);
-    IWithCBus#(LimitedMMTED, MMTED_IFC) mmTed <- exposeCBusIFC(mkMMTED);
+    IWithCBus#(LimitedBPSKReceiver, BPSK_receiver_IFC) bpskReceiver <- exposeCBusIFC(mkBPSK_receiver);
     LineReader lr <- mkLineReader;
 
     Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
+
+    Reg#(REAL_SAMPLE_TYPE) currV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) lastV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) accumV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) errorV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) cpxfixV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) xFixV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yFixV <-mkReg(0);
 
     Reg#(REAL_SAMPLE_TYPE) xV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
@@ -21,9 +29,28 @@ module mkTb (Empty);
 	Reg#(REAL_SAMPLE_TYPE) outV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) mmV <-mkReg(0);
 
+    Reg#(REAL_SAMPLE_TYPE) phV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) errV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) frV <-mkReg(0);
+
     Reg#(UInt#(10)) n <- mkReg(0);
  
     Stmt test = seq
+        lr.start;
+		currV <= lr.result;
+		lr.start;
+		lastV <= lr.result;
+		lr.start;
+		accumV <= lr.result;
+		lr.start;
+		errorV <= lr.result;
+		lr.start;
+		cpxfixV <= lr.result;
+		lr.start;
+		xFixV <= lr.result;
+		lr.start;
+		yFixV <= lr.result;
+
 		lr.start;
 		xV <= lr.result;
 		lr.start;
@@ -35,21 +62,40 @@ module mkTb (Empty);
 		lr.start;
 		mmV <= lr.result;
 
-		mmTed.cbus_ifc.write(5, fromInteger(cleanMask) << xV.i);
-		mmTed.cbus_ifc.write(6, fromInteger(cleanMask) << yV.i);
-		mmTed.cbus_ifc.write(7, fromInteger(cleanMask) << muV.i);
-		mmTed.cbus_ifc.write(8, fromInteger(cleanMask) << outV.i);
-		mmTed.cbus_ifc.write(9, fromInteger(cleanMask) << mmV.i);
+        lr.start;
+		phV <= lr.result;
+		lr.start;
+		errV <= lr.result;
+		lr.start;
+		frV <= lr.result;
+
+		bpskReceiver.cbus_ifc.write(5, fromInteger(cleanMask) << xV.i);
+		bpskReceiver.cbus_ifc.write(6, fromInteger(cleanMask) << yV.i);
+		bpskReceiver.cbus_ifc.write(7, fromInteger(cleanMask) << muV.i);
+		bpskReceiver.cbus_ifc.write(8, fromInteger(cleanMask) << outV.i);
+		bpskReceiver.cbus_ifc.write(9, fromInteger(cleanMask) << mmV.i);
+
+        bpskReceiver.cbus_ifc.write(3, fromInteger(cleanMask) << phV.i);
+		bpskReceiver.cbus_ifc.write(4, fromInteger(cleanMask) << errV.i);
+		bpskReceiver.cbus_ifc.write(10, fromInteger(cleanMask) << frV.i);
+
+        bpskReceiver.cbus_ifc.write(11, fromInteger(cleanMask) << currV.i);
+		bpskReceiver.cbus_ifc.write(12, fromInteger(cleanMask) << lastV.i);
+		bpskReceiver.cbus_ifc.write(13, fromInteger(cleanMask) << accumV.i);
+		bpskReceiver.cbus_ifc.write(14, fromInteger(cleanMask) << errorV.i);
+		bpskReceiver.cbus_ifc.write(15, fromInteger(cleanMask) << cpxfixV.i);
+		bpskReceiver.cbus_ifc.write(16, fromInteger(cleanMask) << xFixV.i);
+		bpskReceiver.cbus_ifc.write(17, fromInteger(cleanMask) << yFixV.i);
 
 		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 			lr.start;
 			realValue <= lr.result;
 			lr.start;
 			imagValue <= lr.result;
-			mmTed.device_ifc.addSample(cmplx(realValue, imagValue));
+			bpskReceiver.device_ifc.addSample(cmplx(realValue, imagValue));
 		endseq
 		action
-		let err <- mmTed.device_ifc.getError;
+		let err <- bpskReceiver.device_ifc.getError;
 		//fxptWrite(5,err);
 		//$display(" ");
 		//coarseFreq.device_ifc.getError;
