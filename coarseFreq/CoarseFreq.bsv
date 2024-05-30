@@ -15,7 +15,7 @@ typedef CBus#(CBADDRSIZE, CBDATASIZE)                   LimitedCoarseFreq;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
-Integer loopFix = 20;
+Integer loopFix = 5;
 
 interface CoarseFreq_IFC;
     method Action addSample (COMPLEX_SAMPLE_TYPE sample);
@@ -69,7 +69,7 @@ function REAL_SAMPLE_TYPE atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
 endfunction: atan
 
 module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
-    Vector#(20, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
+    Vector#(10, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
     FIFO#(COMPLEX_SAMPLE_TYPE) newSample <- mkFIFO;
     Reg#(COMPLEX_SAMPLE_TYPE) lastSample <-mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) currSample <-mkReg(0);

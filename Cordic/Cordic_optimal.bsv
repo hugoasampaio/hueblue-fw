@@ -32,7 +32,7 @@ interface Cordic_IFC;
     method ActionValue #(REAL_SAMPLE_TYPE) getX();
     method ActionValue #(REAL_SAMPLE_TYPE) getY();
 endinterface: Cordic_IFC
-
+(* synthesize *)
 module mkRotate (Cordic_IFC);
     Reg#(UInt#(4)) n <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);

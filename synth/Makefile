@@ -17,9 +17,21 @@ uart.json:
 		read_verilog cl-636/mkTb.v; \
 		synth_gowin -json uart.json"
 
-	yosys -p "read_verilog /opt/bluespec/lib/Verilog/FIFO2.v; \
+#	yosys -p "read_verilog /opt/bluespec/lib/Verilog/FIFO2.v; \
+		read_verilog dma-limit/mkTb.v; \
+		synth_gowin -json uart.json"
+
+#	yosys -p "read_verilog /opt/bluespec/lib/Verilog/FIFO2.v; \
+		read_verilog dma-all12/mkRotate.v; \
+		read_verilog dma-all12/mkCoarseFreqO.v; \
 		read_verilog dma-all12/mkTb.v; \
 		synth_gowin -json uart.json"
+		
+	yosys -p "read_verilog /opt/bluespec/lib/Verilog/FIFO2.v; \
+		read_verilog cl-636/mkRotate.v; \
+		read_verilog cl-636/mkCostasLoopO.v; \
+		read_verilog cl-636/mkTb.v; \
+		synth_gowin -retime -json uart.json "
 	
 # Place and Route
 uart_pnr.json: uart.json

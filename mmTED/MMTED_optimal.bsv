@@ -16,7 +16,7 @@ interface MMTED_IFC;
     method Action addSample (Complex#(FixedPoint#(4, 12)) sample);
     method ActionValue #(FixedPoint#(12, 9)) getError;
 endinterface: MMTED_IFC
-
+(* synthesize *)
 module mkMMTEDO (MMTED_IFC);
 
     Reg#(FixedPoint#(12, 9)) mu <-mkReg(0);

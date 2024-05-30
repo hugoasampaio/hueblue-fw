@@ -11,10 +11,10 @@ import Constants::*;
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
-Integer loopFix = 20;
+Integer loopFix = 5;
 
 interface CoarseFreq_IFC;
-    method Action addSample (Complex#(FixedPoint#(INTEGERSIZE, 6)) sample);
+    method Action addSample (Complex#(FixedPoint#(INTEGERSIZE, 12)) sample);
     method ActionValue #(FixedPoint#(INTEGERSIZE, CBDATASIZE)) getError;
 endinterface: CoarseFreq_IFC
 
@@ -62,17 +62,17 @@ function FixedPoint#(INTEGERSIZE, CBDATASIZE) atan(FixedPoint#(INTEGERSIZE, CBDA
     return fxptTruncate(ret);
 
 endfunction: atan
-
+(* synthesize *)
 module mkCoarseFreqO (CoarseFreq_IFC);
-    Vector#(20, Reg#(Complex#(FixedPoint#(INTEGERSIZE, 6)))) samples <-replicateM(mkReg(0));
-    FIFO#(Complex#(FixedPoint#(INTEGERSIZE, 6))) newSample <- mkFIFO;
-    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 6))) lastSample <-mkReg(0);
-    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 6))) currSample <-mkReg(0);
-    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 9))) accumError <- mkReg(0);
+    Vector#(10, Reg#(Complex#(FixedPoint#(INTEGERSIZE, 12)))) samples <-replicateM(mkReg(0));
+    FIFO#(Complex#(FixedPoint#(INTEGERSIZE, 12))) newSample <- mkFIFO;
+    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 12))) lastSample <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 12))) currSample <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(INTEGERSIZE, 12))) accumError <- mkReg(0);
     Reg#(FixedPoint#(INTEGERSIZE, 12)) fsError <- mkReg(0);
     
-    Reg#(FixedPoint#(INTEGERSIZE, 9)) xFix <- mkReg(1.0);
-    Reg#(FixedPoint#(INTEGERSIZE, 9)) yFix <- mkReg(0.0);
+    Reg#(FixedPoint#(INTEGERSIZE, 12)) xFix <- mkReg(1.0);
+    Reg#(FixedPoint#(INTEGERSIZE, 12)) yFix <- mkReg(0.0);
 
     Reg#(UInt#(10)) n <- mkReg(0);
 
@@ -87,7 +87,7 @@ module mkCoarseFreqO (CoarseFreq_IFC);
             samples[n] <= newSample.first;
             newSample.deq;
         endseq
-        for (n <= 0; n < 20; n <= n+1) seq
+        for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             currSample <= samples[n];
             lastSample.img <=  lastSample.img * -1.0; //conjugado
             lastSample <= (currSample * lastSample);
@@ -122,7 +122,7 @@ module mkCoarseFreqO (CoarseFreq_IFC);
         coarseErrorCalc.start;
     endrule
 
-    method Action addSample (Complex#(FixedPoint#(INTEGERSIZE, 6)) sample);
+    method Action addSample (Complex#(FixedPoint#(INTEGERSIZE, 12)) sample);
         newSample.enq(sample);
     endmethod
 
