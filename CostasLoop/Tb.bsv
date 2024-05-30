@@ -31,9 +31,9 @@ module mkTb (Empty);
 		lr.start;
 		frV <= lr.result;
 
-		cc.cbus_ifc.write(8, 20'hfffff << phV.i);
-		cc.cbus_ifc.write(9, 20'hfffff << errV.i);
-		cc.cbus_ifc.write(10, 20'hfffff << frV.i);
+		cc.cbus_ifc.write(31, fromInteger(cleanMask) << phV.i);
+		cc.cbus_ifc.write(32, fromInteger(cleanMask) << errV.i);
+		cc.cbus_ifc.write(33, fromInteger(cleanMask) << frV.i);
 
         for (n<=0; n < 83; n <= n+1) seq
             lr.start;

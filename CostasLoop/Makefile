@@ -3,11 +3,11 @@ BSCFLAGS=-aggressive-conditions \
 	-opt-undetermined-vals -unspecified-to X +RTS -K100M -H100M -RTS
 
 all:
-	bsc -sim $(BSCFLAGS) -g mkTb -u -bdir obj -p .:%/Libraries:../Cordic:../Constants Tb.bsv 
-	bsc -sim -e mkTb -bdir obj -o CostasLoop.exe -simdir obj_sim
+	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Cordic:../Constants Tb.bsv 
+	bsc -verilog -e mkTb -bdir obj -o CostasLoop.exe -simdir obj_sim
 
 clean:
-	rm obj/*
-	rm obj_sim/*
-	rm *.exe*
+	rm -f obj/*
+	rm -f obj_sim/*
+	rm -f *.exe*
 

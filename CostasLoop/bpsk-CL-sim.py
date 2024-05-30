@@ -1,5 +1,7 @@
 import os
 import sys
+sys.path.append('../')
+import sys
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -212,6 +214,6 @@ fixed_signal =  costas_loop(base_signal)
 #        for mu in range(12):
 #           simulation_step(x, y, mu, base_signal, fixed_signal)
 simulation_step(0, 0, 0, base_signal, fixed_signal)
-simulation_step(8, 8, 8,  base_signal, fixed_signal)
-simulation_step(11, 11, 11,  base_signal, fixed_signal)
-simulation_step(16, 16, 16,  base_signal, fixed_signal)
+#simulation_step(8, 8, 8,  base_signal, fixed_signal)
+#simulation_step(11, 11, 11,  base_signal, fixed_signal)
+#simulation_step(16, 16, 16,  base_signal, fixed_signal)

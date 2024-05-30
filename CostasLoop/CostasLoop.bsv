@@ -30,35 +30,35 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
 
     Reg#(REAL_SAMPLE_TYPE) phase <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) freq <- mkReg(0);
-    Reg#(REAL_SAMPLE_TYPE) error <- mkReg(0);  
+    Reg#(REAL_SAMPLE_TYPE) error <- mkReg(0);
 
-    Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd8, o:0}, 'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd9, o:0},  'hffff);
-    Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd10, o:0},  'hffff);
+    Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd31, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd32, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd33, o:0}, fromInteger(cleanMask));
 
     Cordic_IFC fixFxError <- mkRotate;
     
     Stmt calcError = seq
         //sample <= inSample.first;
+        action
         fixFxError.setPolar(inSample.first.rel, inSample.first.img, -phase);
         inSample.deq;
-        action
-        let x <- fixFxError.getX();
-        sample.rel <= x;
         endaction
         action
-        let y <- fixFxError.getY();
-        sample.img <= y;
+        let polar <- fixFxError.getPolar();
+        sample <= polar;
         endaction
+        action
         outSample.enq(sample);
         error <= sample.rel * sample.img;
+        endaction
         error.f <= error.f & limitError;
         freq <= freq + (error * 0.00932);
         freq.f <= freq.f & limitFreqs;
         phase <= phase + freq + (error * 0.132);
         phase.f <= phase.f & limitPhase;
         
-        //the cordic works +45 to -45
+        //the cordic works +90 to -90
         while (phase > (3.14159/2)) seq
             phase <= phase - (3.14159/2);
         endseq
