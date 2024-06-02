@@ -1,4 +1,4 @@
-package Cordic;
+package Cordic_limited;
 
 import Vector::*;
 import FIFO::*;
@@ -39,7 +39,7 @@ interface Cordic_IFC;
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
 endinterface: Cordic_IFC
 
-module mkRotate (Cordic_IFC);
+module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(UInt#(4)) n <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
@@ -52,7 +52,11 @@ module mkRotate (Cordic_IFC);
     FIFO#(REAL_SAMPLE_TYPE) x_in <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) y_in <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) z_in <- mkFIFO;
-    
+
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd41, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd42, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd43, o:0}, fromInteger(cleanMask));
+
     Stmt cordicFSM = seq
         action
             x_ <= x_in.first;
@@ -93,6 +97,12 @@ module mkRotate (Cordic_IFC);
                 y2 <= y2 - (x2 >> n);
                 z2 <= z2 + angles[n];
             end
+            endaction
+
+            action
+            x2.f <= x2.f & limitX;
+            y2.f <= y2.f & limitY;
+            z2.f <= z2.f & limitZ;
             n <= n+1;
             endaction
         endseq
@@ -130,7 +140,7 @@ module mkRotate (Cordic_IFC);
     endmethod
 
 endmodule
-endpackage : Cordic
+endpackage : Cordic_limited
 
 /*    
     if (y_ > 0) begin

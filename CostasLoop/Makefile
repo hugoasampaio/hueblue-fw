@@ -6,9 +6,12 @@ sim:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Cordic:../Constants Tb.bsv 
 	bsc -verilog -e mkTb -bdir obj -o CostasLoop.exe -simdir obj_sim
 
-hw:
-	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use -p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart.bsv
+hw_limited:
+	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use -p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_limited.bsv
 
+hw_all12:
+	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use -p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_all12.bsv
+	
 
 clean:
 	rm -f obj/*

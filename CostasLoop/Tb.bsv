@@ -1,6 +1,6 @@
 package Tb;
 
-import CostasLoop::*;
+import CostasLoop_limited::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
