@@ -32,16 +32,16 @@ module mkTb#(Clock clk_uart) (UartIface);
     mkConnection(toGet(fifo_uart_tx), uart.rx);
     mkConnection(toPut(fifo_uart_rx), uart.tx);
 
-    Reg#(REAL_SAMPLE_TYPE) phV <-mkReg(0);
-	Reg#(REAL_SAMPLE_TYPE) errV <-mkReg(0);
-	Reg#(REAL_SAMPLE_TYPE) frV <-mkReg(0);
+    Reg#(Bit#(8)) phV <-mkReg(0);
+	Reg#(Bit#(8)) errV <-mkReg(0);
+	Reg#(Bit#(8)) frV <-mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) fixValue <-mkReg(0);
 
-    Reg#(Bit#(16)) ph_bytes <-mkReg(0);
-    Reg#(Bit#(16)) err_bytes <-mkReg(0);
-    Reg#(Bit#(16)) fr_bytes <-mkReg(0);
+    Reg#(Bit#(8)) ph_bytes <-mkReg(0);
+    Reg#(Bit#(8)) err_bytes <-mkReg(0);
+    Reg#(Bit#(8)) fr_bytes <-mkReg(0);
     Reg#(Bit#(32)) real_bytes <-mkReg(0);
     Reg#(Bit#(32)) imag_bytes <-mkReg(0);
     Reg#(Bit#(64)) fix_bytes <-mkReg(0);
@@ -51,39 +51,23 @@ module mkTb#(Clock clk_uart) (UartIface);
     Stmt test = seq
 
         action
-        ph_bytes[15:8] <= fifo_uart_rx.first;
+        phV <= fifo_uart_rx.first;
         fifo_uart_rx.deq;
         endaction
-        action
-        ph_bytes[7:0] <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
-        endaction
-		phV.i <= unpack(ph_bytes[valueOf(INTEGERSIZE)-1:0]);
 
         action
-        err_bytes[15:8] <= fifo_uart_rx.first;
+        errV <= fifo_uart_rx.first;
         fifo_uart_rx.deq;
         endaction
-        action
-        err_bytes[7:0] <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
-        endaction
-		errV.i <= unpack(err_bytes[valueOf(INTEGERSIZE)-1:0]);
 
         action
-        fr_bytes[15:8] <= fifo_uart_rx.first;
+        frV <= fifo_uart_rx.first;
         fifo_uart_rx.deq;
         endaction
-        action
-        fr_bytes[7:0] <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
-        endaction
-		frV.i <= unpack(fr_bytes[valueOf(INTEGERSIZE)-1:0]);
         
-        
-		cc.cbus_ifc.write(31, fromInteger(cleanMask) << phV.i);
-		cc.cbus_ifc.write(32, fromInteger(cleanMask) << errV.i);
-		cc.cbus_ifc.write(33, fromInteger(cleanMask) << frV.i);
+		cc.cbus_ifc.write(31, fromInteger(cleanMask) << phV);
+		cc.cbus_ifc.write(32, fromInteger(cleanMask) << errV);
+		cc.cbus_ifc.write(33, fromInteger(cleanMask) << frV);
 
         for (n<=0; n < 83; n <= n+1) seq
 
