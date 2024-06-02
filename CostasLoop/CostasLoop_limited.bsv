@@ -24,9 +24,10 @@ endinterface: CostasLoop_IFC
 
 module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
 
-    FIFO#(COMPLEX_SAMPLE_TYPE) inSample <- mkFIFO;
-    FIFO#(COMPLEX_SAMPLE_TYPE) outSample <- mkFIFO;
-    Reg#(COMPLEX_SAMPLE_TYPE) sample <- mkReg(0);
+    FIFO#(COMPLEX_SAMPLE_TYPE) inSampleF  <- mkFIFO;
+    FIFO#(COMPLEX_SAMPLE_TYPE) outSampleF <- mkFIFO;
+    Reg#(COMPLEX_SAMPLE_TYPE)  inSample   <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE)  outSample  <- mkReg(0);
 
     Reg#(REAL_SAMPLE_TYPE) phase <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) freq <- mkReg(0);
@@ -35,22 +36,30 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
     Reg#(Bit#(CBDATASIZE)) limitPhase <- mkCBRegRW(CRAddr{a: 8'd31, o:0}, fromInteger(cleanMask));
     Reg#(Bit#(CBDATASIZE)) limitError <- mkCBRegRW(CRAddr{a: 8'd32, o:0}, fromInteger(cleanMask));
     Reg#(Bit#(CBDATASIZE)) limitFreqs <- mkCBRegRW(CRAddr{a: 8'd33, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitIn    <- mkCBRegRW(CRAddr{a: 8'd34, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitOut   <- mkCBRegRW(CRAddr{a: 8'd35, o:0}, fromInteger(cleanMask));
+
+    
 
     Cordic_IFC fixFxError <- mkRotate;
     
     Stmt calcError = seq
-        //sample <= inSample.first;
         action
-        fixFxError.setPolar(inSample.first.rel, inSample.first.img, -phase);
-        inSample.deq;
+        inSample <= inSampleF.first;
+        inSampleF.deq;
         endaction
+        inSample.rel.f <= inSample.rel.f & limitIn;
+        inSample.img.f <= inSample.img.f & limitIn;
+        fixFxError.setPolar(inSample.rel, inSample.img, -phase);
         action
         let polar <- fixFxError.getPolar();
-        sample <= polar;
+        outSample <= polar;
         endaction
+        outSample.rel.f <= outSample.rel.f & limitOut;
+        outSample.img.f <= outSample.img.f & limitOut;
         action
-        outSample.enq(sample);
-        error <= sample.rel * sample.img;
+        outSampleF.enq(outSample);
+        error <= outSample.rel * outSample.img;
         endaction
         error.f <= error.f & limitError;
         freq <= freq + (error * 0.00932);
@@ -75,12 +84,12 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
     endrule
 
     method Action addSample (COMPLEX_SAMPLE_TYPE ns);
-        inSample.enq(ns);
+        inSampleF.enq(ns);
     endmethod
 
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSample;
-        let ret = outSample.first;
-        outSample.deq;
+        let ret = outSampleF.first;
+        outSampleF.deq;
         return ret;
     endmethod
 

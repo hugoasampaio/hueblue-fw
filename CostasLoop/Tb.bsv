@@ -15,12 +15,17 @@ module mkTb (Empty);
     Reg#(REAL_SAMPLE_TYPE) phV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) errV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) frV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) inV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) outV <-mkReg(0);
+
+	Reg#(REAL_SAMPLE_TYPE) xV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) zV <-mkReg(0);
 
     Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
  
     Reg#(UInt#(10)) n <- mkReg(0);
-	Reg#(UInt#(6)) m <- mkReg(0);
 
     Stmt test = seq
 
@@ -30,10 +35,28 @@ module mkTb (Empty);
 		errV <= lr.result;
 		lr.start;
 		frV <= lr.result;
+		lr.start;
+		inV <= lr.result;
+		lr.start;
+		outV <= lr.result;
+		
+		lr.start;
+		xV <= lr.result;
+		lr.start;
+		yV <= lr.result;
+		lr.start;
+		zV <= lr.result;
 
 		cc.cbus_ifc.write(31, fromInteger(cleanMask) << phV.i);
 		cc.cbus_ifc.write(32, fromInteger(cleanMask) << errV.i);
 		cc.cbus_ifc.write(33, fromInteger(cleanMask) << frV.i);
+		cc.cbus_ifc.write(34, fromInteger(cleanMask) << inV.i);
+		cc.cbus_ifc.write(35, fromInteger(cleanMask) << outV.i);
+
+		cc.cbus_ifc.write(41, fromInteger(cleanMask) << xV.i);
+		cc.cbus_ifc.write(42, fromInteger(cleanMask) << yV.i);
+		cc.cbus_ifc.write(43, fromInteger(cleanMask) << zV.i);
+		
 
         for (n<=0; n < 83; n <= n+1) seq
             lr.start;
