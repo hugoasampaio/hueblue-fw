@@ -3,7 +3,7 @@ BSCFLAGS=-aggressive-conditions \
 	-opt-undetermined-vals -unspecified-to X +RTS -K100M -H100M -RTS
 
 sim:
-	bsc -sim $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Constants Tb_python.bsv 
+	bsc -sim $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Constants Tb_python_limited.bsv 
 	bsc -sim -e mkTb -bdir obj -o mmTED.exe -simdir obj_sim
 
 hw_limited:
