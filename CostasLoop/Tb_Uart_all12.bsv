@@ -4,7 +4,6 @@ import CostasLoop::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
-import CBus::*;
 import Constants::*;
 import RS232::*;
 import GetPut::*;

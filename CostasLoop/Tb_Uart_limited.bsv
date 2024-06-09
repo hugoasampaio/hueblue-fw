@@ -39,9 +39,6 @@ module mkTb#(Clock clk_uart) (UartIface);
     Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) fixValue <-mkReg(0);
 
-    Reg#(Bit#(8)) ph_bytes <-mkReg(0);
-    Reg#(Bit#(8)) err_bytes <-mkReg(0);
-    Reg#(Bit#(8)) fr_bytes <-mkReg(0);
     Reg#(Bit#(32)) real_bytes <-mkReg(0);
     Reg#(Bit#(32)) imag_bytes <-mkReg(0);
     Reg#(Bit#(64)) fix_bytes <-mkReg(0);
