@@ -1,6 +1,6 @@
-package Tb;
+package Tb_python;
 
-import MMTED::*;
+import MMTED_limited::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
@@ -18,9 +18,11 @@ module mkTb (Empty);
     Reg#(REAL_SAMPLE_TYPE) xV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) muV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) inV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) mmV <-mkReg(0);
 
     Reg#(UInt#(10)) n <- mkReg(0);
-	Reg#(UInt#(6)) m <- mkReg(0);
+
  
     Stmt test = seq
 		lr.start;
@@ -29,24 +31,32 @@ module mkTb (Empty);
 		yV <= lr.result;
 		lr.start;
 		muV <= lr.result;
+		lr.start;
+		inV <= lr.result;
+		lr.start;
+		mmV <= lr.result;
 
-		mmTed.cbus_ifc.write(5, 20'hfffff << xV.i);
-		mmTed.cbus_ifc.write(6, 20'hfffff << yV.i);
-		mmTed.cbus_ifc.write(7, 20'hfffff << muV.i);
-
-		for (n <= 0; n < 340; n <= n+1) seq
+		mmTed.cbus_ifc.write(21, fromInteger(cleanMask) << xV.i);
+		mmTed.cbus_ifc.write(22, fromInteger(cleanMask) << yV.i);
+		mmTed.cbus_ifc.write(23, fromInteger(cleanMask) << muV.i);
+		mmTed.cbus_ifc.write(24, fromInteger(cleanMask) << inV.i);
+		mmTed.cbus_ifc.write(25, fromInteger(cleanMask) << mmV.i);
+		
+		for (n <= 0; n < 445; n <= n+1) seq
 			lr.start;
 			realValue <= lr.result;
 			lr.start;
 			imagValue <= lr.result;
 			mmTed.device_ifc.addSample(cmplx(realValue, imagValue));
 		endseq
-		action
-		let err <- mmTed.device_ifc.getError;
-		//fxptWrite(5,err);
-		//$display(" ");
-		//coarseFreq.device_ifc.getError;
+		while (mmTed.device_ifc.hasFixedSample() == True) action
+			let fix <- mmTed.device_ifc.getFixedSample;
+			fxptWrite(5, fix.rel);
+			$write(", ");
+			fxptWrite(5, fix.img);
+			$display("  ");
 		endaction
+
     endseq;
     mkAutoFSM(test);
     
@@ -124,4 +134,4 @@ module mkLineReader(LineReader);
 	method result if (fsm.done) = number;
 
 endmodule: mkLineReader
-endpackage: Tb
+endpackage: Tb_python
