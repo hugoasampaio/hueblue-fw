@@ -159,8 +159,8 @@ def simulation_step(ph_limiter: int, err_limiter: int, fr_limiter: int,
                     log: list, log_index: int):
 
     #print values to run bittrue simulation on bsv
-    in_file_name = "log/cl-sim-"+str(log_index)+"-py.log"
-    out_file_name = "log/cl-sim-"+str(log_index)+"-bsv.log"
+    in_file_name = "/tmp/cl-sim-"+str(log_index)+"-py.log"
+    out_file_name = "/tmp/cl-sim-"+str(log_index)+"-bsv.log"
     f = open(in_file_name, "w")
     print(f'{ph_limiter}.0, {err_limiter}.0, {fr_limiter}.0, {in_limiter}.0, {out_limiter}.0, {xcordic}.0, {ycordic}.0, {zcordic}.0',
           file = f)
@@ -210,7 +210,7 @@ def threaded_simulations(x: int, y:int, mu:int,
     threads = [None] * ITERATIONS
     for n in range(ITERATIONS):
         threads[n] = Thread(target=simulation_step, 
-                args=(x, y, mu, inSample, outSample, xcordic, ycordic, zcordicbase_signal[n], fixed_signal[n], snr_log, n))
+                args=(x, y, mu, inSample, outSample, xcordic, ycordic, zcordic, base_signal[n], fixed_signal[n], snr_log, n))
         threads[n].start()
     for n in range(ITERATIONS):
         threads[n].join()
@@ -220,26 +220,26 @@ for i in range(ITERATIONS):
     fixed_signal[i] =  costas_loop(base_signal[i])
 
 def full_simulation():
-    for ph in range(0,4):
-        for err in range (0,4):
-            for freq in range(0,4):
-                for inSample in range(0, 4):
-                    for outSample in range(0,4):
-                        for xcordic in range(0, 4):
-                            for ycordic in range(0, 4):
-                                for zcordic in range(0, 4):
+    for ph in range(0,3):
+        for err in range (0,3):
+            for freq in range(0,3):
+                for inSample in range(0, 3):
+                    for outSample in range(0,3):
+                        for xcordic in range(0, 3):
+                            for ycordic in range(0, 3):
+                                for zcordic in range(0, 3):
                                     threaded_simulations(ph, err, freq, inSample, outSample, xcordic, ycordic, zcordic)
                                     log = np.array(snr_log)
                                     print("mean:", "{:.3f}".format(log.mean()), 
                                             "std:", "{:.3f}".format(log.std()),
                                             "min:", "{:.3f}".format(log.min()),
-                                            "WL:", ph, err, freq)
+                                            "WL:", ph, err, freq, inSample, outSample, xcordic, ycordic, zcordic)
 
-simulation_step(0, 0, 0,0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
-print("sqnr:", "{:.3f}".format(snr_log[0]))
+#simulation_step(0, 0, 0,0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
+#print("sqnr:", "{:.3f}".format(snr_log[0]))
 #simulation_step(6, 6, 4, 6, 6, base_signal[0], fixed_signal[0], snr_log, 0)
 #print("sqnr:", "{:.3f}".format(snr_log[0]))
 
-#full_simulation()
+full_simulation()
 
 print(time.ctime())

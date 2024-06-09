@@ -3,8 +3,8 @@ BSCFLAGS=-aggressive-conditions \
 	-opt-undetermined-vals -unspecified-to X +RTS -K100M -H100M -RTS
 
 sim:
-	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Cordic:../Constants Tb.bsv 
-	bsc -verilog -e mkTb -bdir obj -o CostasLoop.exe -simdir obj_sim
+	bsc -sim $(BSCFLAGS) -g mkTb -u -bdir obj -p +:../Cordic:../Constants Tb.bsv 
+	bsc -sim -e mkTb -bdir obj -o CostasLoop.exe -simdir obj_sim
 
 hw_limited:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use -p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_limited.bsv
