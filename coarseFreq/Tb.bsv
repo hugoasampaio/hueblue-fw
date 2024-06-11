@@ -79,12 +79,18 @@ module mkTb (Empty);
 			imagValue <= lr.result;
 			coarseFreq.device_ifc.addSample(cmplx(realValue, imagValue));
 		endseq
-		let fix <- coarseFreq.device_ifc.getError();
 		/*
+		action
+			let fix <- coarseFreq.device_ifc.getError();
+			fxptWrite(6, fix);
+			$display(" ");
+		endaction
+		*/
+
 		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 			action
-			
-			
+			let fix <- coarseFreq.device_ifc.getFixedSamples();
+
 			fxptWrite(5, fix.rel);
 			$write(", ");
 			fxptWrite(5, fix.img);
@@ -92,7 +98,8 @@ module mkTb (Empty);
 			
 			endaction
 		endseq
-		*/
+		
+		
 	endseq;
     
     mkAutoFSM(test);

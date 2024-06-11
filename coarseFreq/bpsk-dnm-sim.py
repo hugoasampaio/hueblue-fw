@@ -66,7 +66,7 @@ def gen_signal():
     rx_signal = np.convolve(tx_signal, h) # apply filter
 
     #rx - step 2: freq offset from different LO
-    fo = fsamples*0.01 #freq offset in %
+    fo = fsamples*0.25 #freq offset in %
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
     return rx_fo_delay
@@ -206,8 +206,6 @@ def threaded_simulations(curr: int, last:int, accum:int,
 simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
 
 print(time.ctime())
-#best:
-#mean: 14.235 std: 1.584 WL: 6 6 3 0 9 3 2
 #simulated annealing
 
 #masks = [12, 12, 12, 12, 12, 12]

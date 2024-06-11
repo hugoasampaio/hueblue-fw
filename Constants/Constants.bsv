@@ -4,9 +4,9 @@ import CBus::*;
 import Complex::*;
 
 typedef 8    CBADDRSIZE; //size of configuration address bus to decode
-typedef 12   CBDATASIZE; //size of configuration data bus
+typedef 16   CBDATASIZE; //size of configuration data bus
 
-Integer cleanMask = 'hfff;
+Integer cleanMask = 'hffff;
 
 typedef 12  INTEGERSIZE; //-2048 a 2047, atan tem ²
  
