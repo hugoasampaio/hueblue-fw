@@ -19,9 +19,16 @@ module mkTb (Empty);
 	Reg#(REAL_SAMPLE_TYPE) lastV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) accumV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) errorV <-mkReg(0);
-	Reg#(REAL_SAMPLE_TYPE) cpxfixV <-mkReg(0);
+
 	Reg#(REAL_SAMPLE_TYPE) xFixV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) yFixV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) inV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) outV <-mkReg(0);
+
+	Reg#(REAL_SAMPLE_TYPE) xV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) zV <-mkReg(0);
+
 
     Reg#(UInt#(10)) n <- mkReg(0);
  
@@ -34,20 +41,36 @@ module mkTb (Empty);
 		accumV <= lr.result;
 		lr.start;
 		errorV <= lr.result;
-		lr.start;
-		cpxfixV <= lr.result;
+
 		lr.start;
 		xFixV <= lr.result;
 		lr.start;
 		yFixV <= lr.result;
+		lr.start;
+		inV <= lr.result;
+		lr.start;
+		outV <= lr.result;
+
+		lr.start;
+		xV <= lr.result;
+		lr.start;
+		yV <= lr.result;
+		lr.start;
+		zV <= lr.result;
 
 		coarseFreq.cbus_ifc.write(11, fromInteger(cleanMask) << currV.i);
 		coarseFreq.cbus_ifc.write(12, fromInteger(cleanMask) << lastV.i);
 		coarseFreq.cbus_ifc.write(13, fromInteger(cleanMask) << accumV.i);
 		coarseFreq.cbus_ifc.write(14, fromInteger(cleanMask) << errorV.i);
-		coarseFreq.cbus_ifc.write(15, fromInteger(cleanMask) << cpxfixV.i);
+
 		coarseFreq.cbus_ifc.write(16, fromInteger(cleanMask) << xFixV.i);
 		coarseFreq.cbus_ifc.write(17, fromInteger(cleanMask) << yFixV.i);
+		coarseFreq.cbus_ifc.write(18, fromInteger(cleanMask) << inV.i);
+		coarseFreq.cbus_ifc.write(19, fromInteger(cleanMask) << outV.i);
+
+		coarseFreq.cbus_ifc.write(41, fromInteger(cleanMask) << xV.i);
+		coarseFreq.cbus_ifc.write(42, fromInteger(cleanMask) << yV.i);
+		coarseFreq.cbus_ifc.write(43, fromInteger(cleanMask) << zV.i);
 		
 		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 			lr.start;
@@ -56,13 +79,22 @@ module mkTb (Empty);
 			imagValue <= lr.result;
 			coarseFreq.device_ifc.addSample(cmplx(realValue, imagValue));
 		endseq
-		action
-		let err <- coarseFreq.device_ifc.getError;
-		//fxptWrite(5,err);
-		//$display(" ");
-		//coarseFreq.device_ifc.getError;
-		endaction
-    endseq;
+		let fix <- coarseFreq.device_ifc.getError();
+		/*
+		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
+			action
+			
+			
+			fxptWrite(5, fix.rel);
+			$write(", ");
+			fxptWrite(5, fix.img);
+			$display(" ");
+			
+			endaction
+		endseq
+		*/
+	endseq;
+    
     mkAutoFSM(test);
     
 endmodule: mkTb

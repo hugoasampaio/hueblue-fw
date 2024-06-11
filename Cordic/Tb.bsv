@@ -1,6 +1,6 @@
 package Tb;
 
-import Cordic::*;
+import Cordic_limited::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
@@ -21,7 +21,12 @@ module mkTb (Empty);
     Reg#(UInt#(10)) n <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) realV <- mkReg(1.0);
     Reg#(REAL_SAMPLE_TYPE) imagV <- mkReg(0.0);
-    
+
+    /*
+    cordic.cbus_ifc.write(41, fromInteger(cleanMask));
+	cordic.cbus_ifc.write(42, fromInteger(cleanMask));
+	cordic.cbus_ifc.write(43, fromInteger(cleanMask));
+    */
     Stmt test = seq 
         for (n <= 0; n < fromInteger(test_size); n <= n+1) seq
             cordic.device_ifc.setPolar(x[n], y[n], z[n]);
@@ -42,7 +47,7 @@ module mkTb (Empty);
             //10 degree
             // cordic.device_ifc.setPolar(realV, imagV, 0.17453);
             //120 degree
-            cordic.device_ifc.setPolar(realV, imagV, 2.094395);
+            cordic.device_ifc.setPolar(realV, imagV, -2.094395);
             action
             let x_rot <- cordic.device_ifc.getX;
             let y_rot <- cordic.device_ifc.getY;
@@ -50,10 +55,19 @@ module mkTb (Empty);
             imagV <= y_rot;
             endaction
         endseq
+
+            action
+            fxptWrite(6,realV);
+            $write(", ");
+            fxptWrite(6,imagV);
+            $display(" ");
+            endaction
+        /*
         fxptWrite(6,realV);
         $write(", ");
         fxptWrite(6,imagV);
         $display(" ");
+        */
     endseq;
     mkAutoFSM(test);
     

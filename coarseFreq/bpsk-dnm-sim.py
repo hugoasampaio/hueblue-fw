@@ -10,7 +10,7 @@ from threading import Thread
 
 
 print(time.ctime())
-ITERATIONS = 1000
+ITERATIONS = 100
 base_signal = [0] * ITERATIONS
 fixed_signal = [0] * ITERATIONS
 snr_log = [0] * ITERATIONS
@@ -54,7 +54,7 @@ def gen_signal():
     n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
     ne = float(np.sum(np.abs(n) ** 2)) / len(n)
     se = float(np.sum(np.abs(tx_signal) ** 2)) / len(tx_signal)
-    tx_signal = tx_signal + n/(100*ne/se)
+    tx_signal = tx_signal + n/(1000*ne/se)
 
     #delay pre RX
     delay = 0.1 # fractional delay, in samples
@@ -66,7 +66,7 @@ def gen_signal():
     rx_signal = np.convolve(tx_signal, h) # apply filter
 
     #rx - step 2: freq offset from different LO
-    fo = fsamples*0.25 #freq offset in %
+    fo = fsamples*0.01 #freq offset in %
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
     return rx_fo_delay
@@ -84,7 +84,7 @@ def perform_estimation_n_fix(rx_signal: np.array):
         conj = (rx * last_rx.conjugate())
         err_ += conj
         #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
-        if sum > 24*sps:
+        if sum > 16*sps:
             #print(((sps/2)/(np.pi*Tsymbol)))
             fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         last_rx = rx
@@ -98,16 +98,17 @@ def perform_estimation_n_fix(rx_signal: np.array):
 ###################################################################################
 
 def simulation_step(curr_lim: int, last_lim: int, accum_lim: int, 
-                    error_lim: int, cplxFix_lim: int, 
-                    xFix_lim: int, yFix_lim: int,
+                    error_lim: int, xFix_lim: int, yFix_lim: int,
+                    in_lim: int, out_lim: int,
+                    xcordic:int, ycordic:int, zcordic:int,
                     rx_signal: np.array, reference_signal: np.array,
                     log: list, log_index: int):
 
     #print values to run bittrue simulation on bsv
-    in_file_name = "log/dnm-sim-"+str(log_index)+"-py.log"
-    out_file_name = "log/dnm-sim-"+str(log_index)+"-bsv.log"
+    in_file_name = "/tmp/dnm-sim-"+str(log_index)+"-py.log"
+    out_file_name = "/tmp/dnm-sim-"+str(log_index)+"-bsv.log"
     f = open(in_file_name, "w")
-    print(f'{curr_lim}.0, {last_lim}.0, {accum_lim}.0, {error_lim}.0, {cplxFix_lim}.0, {xFix_lim}.0, {yFix_lim}.0',
+    print(f'{curr_lim}.0, {last_lim}.0, {accum_lim}.0, {error_lim}.0, {xFix_lim}.0, {yFix_lim}.0, {in_lim}.0, {out_lim}.0, {xcordic}.0, {ycordic}.0, {zcordic}.0',
           file= f)
     for datum in rx_signal:
         print("{:.6f}".format(datum.real), 
@@ -150,30 +151,34 @@ def simulation_step(curr_lim: int, last_lim: int, accum_lim: int,
     snr = sqnr(reference_signal[0:index], 
                coarse_freq_corrected_bsv[0:index])
     log[log_index] = snr
-    if (snr < 7.0):
-        print("n:", n, "sqnr:", snr)
-        print("c:",curr_lim,"l:",last_lim, 
-          "a:",accum_lim,"e:",error_lim, 
-          "cf:",cplxFix_lim,"x:",xFix_lim,"y:",yFix_lim,
-          " sqnr:", snr)
-        plt.figure(1)
-        plt.plot(reference_signal.real, '.-')
-        plt.plot(reference_signal.imag,'.-')
-    
-        plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-        plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-        plt.show()
+
+    #if (snr < 7.0):
+    #    print("n:", n, "sqnr:", snr)
+    #    print("c:",curr_lim,"l:",last_lim, 
+    #      "a:",accum_lim,"e:",error_lim, 
+    #      "cf:",cplxFix_lim,"x:",xFix_lim,"y:",yFix_lim,
+    #      " sqnr:", snr)
+    plt.figure(1)
+    plt.plot(reference_signal.real, '.-')
+    plt.plot(reference_signal.imag,'.-')
+    plt.figure(2)
+    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    plt.show()
     #return snr
 
 for i in range(ITERATIONS):
     base_signal[i]  =  gen_signal()
     fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
+print("signals generated" + time.ctime())
 
-def threaded_simulations(curr: int, last:int, accum:int, cx:int, x:int, y:int):
+def threaded_simulations(curr: int, last:int, accum:int, 
+                         error:int, x:int, y:int,
+                         inL:int, outL:int, xc:int, yc:int, zc:int):
     threads = [None] * ITERATIONS
     for n in range(ITERATIONS):
         threads[n] = Thread(target=simulation_step, 
-                args=(curr, last, accum, 0, cx, x, y, base_signal[n], fixed_signal[n], snr_log, n))
+                args=(curr, last, accum, error, x, y, inL, outL, xc, yc, zc, base_signal[n], fixed_signal[n], snr_log, n))
         threads[n].start()
     for n in range(ITERATIONS):
         threads[n].join()
@@ -191,14 +196,14 @@ def threaded_simulations(curr: int, last:int, accum:int, cx:int, x:int, y:int):
 #                                "WL:", curr, last, accum, 0, cx, x, y)
 
 #threaded_simulations(6, 6, 3, 9, 3, 2)
-for n in range(ITERATIONS):
-    simulation_step(6, 6, 3, 0, 9, 3, 2, base_signal[n], fixed_signal[n], snr_log, n)
+#threaded_simulations(0, 0, 0, 0, 0, 0, 0,0,0,0,0)
 
-log = np.array(snr_log)
-print("mean:", "{:.3f}".format(log.mean()), 
-              "std:", "{:.3f}".format(log.std()),
-              "min",  "{:.3f}".format(log.min()),
-               "WL:", 6, 6, 3, 9, 3, 2)
+#log = np.array(snr_log)
+#print("mean:", "{:.3f}".format(log.mean()), 
+#              "std:", "{:.3f}".format(log.std()),
+#              "min",  "{:.3f}".format(log.min()))
+
+simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
 
 print(time.ctime())
 #best:

@@ -45,13 +45,17 @@ module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) z_ <- mkReg(0);
 
+    /*
     Reg#(REAL_SAMPLE_TYPE) x2 <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) y2 <- mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) z2 <- mkReg(0);
-
+    */
     FIFO#(REAL_SAMPLE_TYPE) x_in <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) y_in <- mkFIFO;
     FIFO#(REAL_SAMPLE_TYPE) z_in <- mkFIFO;
+
+    FIFO#(REAL_SAMPLE_TYPE) x_out <- mkFIFO;
+    FIFO#(REAL_SAMPLE_TYPE) y_out <- mkFIFO;
 
     Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd41, o:0}, fromInteger(cleanMask));
     Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd42, o:0}, fromInteger(cleanMask));
@@ -67,76 +71,91 @@ module [LimitedOps] mkRotate (Cordic_IFC);
             z_in.deq;
         endaction
         //45 degree
-        while (z_ > angles[0]) action
+        while (z_ > angles[0]) seq
+        action
                 x_ <= (x_ - y_) * kForNinety;
                 y_ <= (y_ + x_) * kForNinety;
                 z_ <= z_ - angles[0];
         endaction
+        action
+            x_.f <= x_.f & limitX;
+            y_.f <= y_.f & limitY;
+            z_.f <= z_.f & limitZ;
+        endaction
+        endseq
         
-        while (z_ < angles[0]) action
+        while (z_ < angles[0]) seq
+        action
                 x_ <= (x_ + y_) * kForNinety;
                 y_ <= (y_ - x_) * kForNinety;
                 z_ <= z_ + angles[0];
         endaction
- 
         action
-        x2 <= x_;
-        y2 <= y_;
-        z2 <= z_;
-        n <= 0;
+            x_.f <= x_.f & limitX;
+            y_.f <= y_.f & limitY;
+            z_.f <= z_.f & limitZ;
         endaction
+        endseq
 
-        while (n < fromInteger(nAngles)) seq
+        for (n <=0; n < fromInteger(nAngles); n<=n+1) seq
             action
-            if (z2 > 0.0) begin
-                x2 <= x2 - (y2 >> n);
-                y2 <= y2 + (x2 >> n);
-                z2 <= z2 - angles[n];
+            if (z_ > 0.0) begin
+                x_ <= x_ - (y_ >> n);
+                y_ <= y_ + (x_ >> n);
+                z_ <= z_ - angles[n];
             end else begin
-                x2 <= x2 + (y2 >> n);
-                y2 <= y2 - (x2 >> n);
-                z2 <= z2 + angles[n];
+                x_ <= x_ + (y_ >> n);
+                y_ <= y_ - (x_ >> n);
+                z_ <= z_ + angles[n];
             end
             endaction
 
             action
-            x2.f <= x2.f & limitX;
-            y2.f <= y2.f & limitY;
-            z2.f <= z2.f & limitZ;
-            n <= n+1;
+            x_.f <= x_.f & limitX;
+            y_.f <= y_.f & limitY;
+            z_.f <= z_.f & limitZ;
             endaction
         endseq
+        action
+            x_out.enq(x_);
+            y_out.enq(y_);
+        endaction
     endseq;
 
     FSM atanCalc <- mkFSM(cordicFSM);
 
+/*
     rule init;
         atanCalc.start;
     endrule
-
+*/
     method Action setPolar(REAL_SAMPLE_TYPE x, 
     REAL_SAMPLE_TYPE y, 
     REAL_SAMPLE_TYPE z);
         x_in.enq(x);
         y_in.enq(y);
         z_in.enq(z);
+        atanCalc.start;
     endmethod
 
     method ActionValue #(REAL_SAMPLE_TYPE) getX();
-        atanCalc.waitTillDone();
-        return (x2 * 0.607253);
-        //return x_;
+        let a = x_out.first;
+        x_out.deq;
+        return (a * 0.607253);
     endmethod
 
     method ActionValue #(REAL_SAMPLE_TYPE) getY();
-        atanCalc.waitTillDone();
-        return (y2 * 0.607253);
-        //return y_;
+        let b = y_out.first;
+        y_out.deq;
+        return (b * 0.607253);
     endmethod
 
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
-        atanCalc.waitTillDone();
-        return (cmplx(x2 * 0.607253, y2 * 0.607253));
+       let a = x_out.first;
+        x_out.deq;
+        let b = y_out.first;
+        y_out.deq;
+        return (cmplx(a * 0.607253, b * 0.607253));
     endmethod
 
 endmodule
