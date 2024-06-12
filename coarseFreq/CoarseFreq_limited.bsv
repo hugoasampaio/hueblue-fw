@@ -1,4 +1,4 @@
-package CoarseFreq;
+package CoarseFreq_limited;
 
 import Complex::*;
 import Vector::*;
@@ -138,4 +138,4 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
 
 endmodule: mkCoarseFreq
 
-endpackage: CoarseFreq
+endpackage: CoarseFreq_limited

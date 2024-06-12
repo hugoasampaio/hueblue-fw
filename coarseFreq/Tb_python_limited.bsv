@@ -1,6 +1,6 @@
 package Tb;
 
-import CoarseFreq::*;
+import CoarseFreq_limited::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
