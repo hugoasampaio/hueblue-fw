@@ -1,4 +1,4 @@
-package Tb;
+package Tb_python_limited;
 
 import CoarseFreq_limited::*;
 import StmtFSM::*;
@@ -180,7 +180,7 @@ module mkLineReader(LineReader);
 	method result if (fsm.done) = number;
 
 endmodule: mkLineReader
-endpackage: Tb
+endpackage: Tb_python_limited
      /* atan base test
         $display("  ");
         fxptWrite(5, atan(2.819, 1.026));//20 --- 0.349

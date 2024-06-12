@@ -8,15 +8,15 @@ sim:
 
 hw_limited:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use \
-	-p +:%/Libraries/FPGA/Misc/:../Constants Tb_Uart_limited.bsv
+	-p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_limited.bsv
 
 hw_all12:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use \
-	-p +:%/Libraries/FPGA/Misc/:../Constants Tb_Uart_all12.bsv
+	-p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_all12.bsv
 	
 hw_opt:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use \
-	-p +:%/Libraries/FPGA/Misc/:../Constants Tb_Uart_optimal.bsv
+	-p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_optimal.bsv
 
 clean:
 	rm -f obj/*
