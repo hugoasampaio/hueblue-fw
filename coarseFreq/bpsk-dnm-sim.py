@@ -28,7 +28,7 @@ fsamples = 1 # assume our sample rate is 1 Hz
 Tsample = 1/fsamples # calc sample period
 Tsymbol = Tsample*sps
 
-def gen_signal():
+def gen_signal(fs_error: float):
     num_symbols = int(10*8*fsamples)
 
     in_bits = np.random.randint(0, 2, num_symbols) # Our data to be transmitted, 1's and 0's
@@ -66,7 +66,7 @@ def gen_signal():
     rx_signal = np.convolve(tx_signal, h) # apply filter
 
     #rx - step 2: freq offset from different LO
-    fo = fsamples*0.25 #freq offset in %
+    fo = fsamples*fs_error #freq offset in %
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
     rx_fo_delay= rx_signal * np.exp(1j*2*np.pi*fo*t) # perform freq shift
     return rx_fo_delay
@@ -167,11 +167,6 @@ def simulation_step(curr_lim: int, last_lim: int, accum_lim: int,
     #plt.show()
     #return snr
 
-for i in range(ITERATIONS):
-    base_signal[i]  =  gen_signal()
-    fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
-print("signals generated" + time.ctime())
-
 def threaded_simulations(curr: int, last:int, accum:int, 
                          error:int, x:int, y:int,
                          inL:int, outL:int, xc:int, yc:int, zc:int):
@@ -203,8 +198,22 @@ def threaded_simulations(curr: int, last:int, accum:int,
 #              "std:", "{:.3f}".format(log.std()),
 #              "min",  "{:.3f}".format(log.min()))
 
-simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
-print(snr_log[0])
+#for i in range(ITERATIONS):
+#        base_signal[i]  =  gen_signal()
+#        fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
+
+for err in np.linspace(0.01, 0.49, 30):
+    base_signal[0]  =  gen_signal(err)
+    fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
+    simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
+    print("{:.6f}".format(err), "{:.6f}".format(snr_log[0]))
+
+#base_signal[0]  =  gen_signal(0.085)
+#fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
+#simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
+#print("{:.6f}".format(0.085), "{:.6f}".format(snr_log[0]))
+
+
 print(time.ctime())
 #simulated annealing
 

@@ -36,6 +36,7 @@ interface Cordic_IFC;
     method Action setPolar(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y, REAL_SAMPLE_TYPE z);
     method ActionValue #(REAL_SAMPLE_TYPE) getX();
     method ActionValue #(REAL_SAMPLE_TYPE) getY();
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
 endinterface: Cordic_IFC
 
@@ -61,7 +62,7 @@ module [LimitedOps] mkRotate (Cordic_IFC);
     Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd42, o:0}, fromInteger(cleanMask));
     Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd43, o:0}, fromInteger(cleanMask));
 
-    Stmt cordicFSM = seq
+    Stmt rotateFSM = seq
         action
             x_ <= x_in.first;
             y_ <= y_in.first;
@@ -122,20 +123,15 @@ module [LimitedOps] mkRotate (Cordic_IFC);
         endaction
     endseq;
 
-    FSM atanCalc <- mkFSM(cordicFSM);
+    FSM rotateCalc <- mkFSM(rotateFSM);
 
-/*
-    rule init;
-        atanCalc.start;
-    endrule
-*/
     method Action setPolar(REAL_SAMPLE_TYPE x, 
     REAL_SAMPLE_TYPE y, 
     REAL_SAMPLE_TYPE z);
         x_in.enq(x);
         y_in.enq(y);
         z_in.enq(z);
-        atanCalc.start;
+        rotateCalc.start;
     endmethod
 
     method ActionValue #(REAL_SAMPLE_TYPE) getX();
@@ -150,6 +146,10 @@ module [LimitedOps] mkRotate (Cordic_IFC);
         return (b * 0.607253);
     endmethod
 
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
+        return (0.0);
+    endmethod
+
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
        let a = x_out.first;
         x_out.deq;
@@ -157,29 +157,147 @@ module [LimitedOps] mkRotate (Cordic_IFC);
         y_out.deq;
         return (cmplx(a * 0.607253, b * 0.607253));
     endmethod
+endmodule: mkRotate
 
-endmodule
+module [LimitedOps] mkAtan (Cordic_IFC);
+    Reg#(UInt#(4)) n <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) z_ <- mkReg(0);
+
+    FIFO#(REAL_SAMPLE_TYPE) x_in <- mkFIFO;
+    FIFO#(REAL_SAMPLE_TYPE) y_in <- mkFIFO;
+
+    FIFO#(REAL_SAMPLE_TYPE) z_out <- mkFIFO;
+
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd41, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd42, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd43, o:0}, fromInteger(cleanMask));
+
+    Stmt atanFSM = seq
+        action
+            x_ <= x_in.first;
+            y_ <= y_in.first;
+            x_in.deq;
+            y_in.deq;
+            z_ <= 0;
+        endaction
+        /*45 degree*/
+        while (x_ < 0.0) seq
+        action
+            if (y_ > 0.0) begin
+                x_ <= x_ + y_ ;
+                y_ <= y_ - x_ ;
+                z_ <= z_ + angles[0];
+            end else begin
+                x_ <= x_ - y_;
+                y_ <= y_ + x_;
+                z_ <= z_ - angles[0];
+            end
+            endaction
+            action
+            x_.f <= x_.f & limitX;
+            y_.f <= y_.f & limitY;
+            z_.f <= z_.f & limitZ;
+            endaction
+        endseq
+        
+        for (n <=0; n < fromInteger(nAngles); n<=n+1) seq
+            action
+            if (y_ >= 0.0) begin
+                x_ <= x_ + (y_ >> n);
+                y_ <= y_ - (x_ >> n);
+                z_ <= z_ + angles[n];
+            end else begin
+                x_ <= x_ - (y_ >> n);
+                y_ <= y_ + (x_ >> n);
+                z_ <= z_ - angles[n];
+            end
+            endaction
+            action
+            x_.f <= x_.f & limitX;
+            y_.f <= y_.f & limitY;
+            z_.f <= z_.f & limitZ;
+            endaction
+        endseq
+        action
+        z_out.enq(z_);
+        endaction
+    endseq;
+
+    FSM atanCalc <- mkFSM(atanFSM);
+
+    method Action setPolar(REAL_SAMPLE_TYPE x, 
+    REAL_SAMPLE_TYPE y, 
+    REAL_SAMPLE_TYPE z);
+        x_in.enq(x);
+        y_in.enq(y);
+        atanCalc.start;
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getX();
+        return (0.0);
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getY();
+        return (0.0);
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
+        let c = z_out.first;
+        z_out.deq;
+        return (c);
+    endmethod
+
+    method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
+        return (cmplx(0.0, 0.0));
+    endmethod
+
+endmodule: mkAtan
 endpackage : Cordic_limited
 
-/*    
-    if (y_ > 0) begin
-    x_ <= x_ + (y_ >> n);
-    y_ <= y_ - (x_ >> n);
-    sumAngle <= sumAngle + angles[n];
+/*based on understanding dsp equation
+function REAL_SAMPLE_TYPE atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
+ 
+    REAL_SAMPLE_TYPE xAbs = x;
+    REAL_SAMPLE_TYPE yAbs = y;
+    REAL_SAMPLE_TYPE x_ = x;
+    REAL_SAMPLE_TYPE y_ = y;
+    REAL_SAMPLE_TYPE ret = 0.0;
+
+    Bool yPos = True;
+
+    if (yAbs < 0.0) begin
+        yAbs = yAbs * -1.0;
+        yPos = False;
     end
-    else begin
-    x_ <= x_ - (y_ >> n);
-    y_ <= y_ + (x_ >> n);
-    sumAngle <= sumAngle - angles[n];
+
+    if (xAbs < 0.0) begin
+        xAbs = xAbs * -1.0;
     end
 
-if (z > 1.570796) begin
-            bigAngle<= True;
-            z_ <= z - 2*(z - 1.570796);
-        end else if (z < (-1.570796)) begin
-            bigAngle<= True;
-            z_ <= z + 2*(z + 1.570796);
-        end else
+    //1th and 8th octants
+    if (x >= 0.0 && (xAbs > yAbs)) begin
+        ret = ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
+    end
 
+    //2nd and 3rd octants
+    if (y >= 0.0 && (yAbs >= xAbs)) begin
+        ret = 1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
+    end
+    //4th and 5th octants
+    if (x < 0.0 && (xAbs > yAbs)) begin
+        if (yPos == True) begin
+            ret = 3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
+        end 
+        else begin
+            ret = -3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
+        end 
+    end
+    if (y < 0.0 && (yAbs >= xAbs)) begin
+        ret = -1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
+    end
+    return fxptTruncate(ret);
 
+endfunction: atan
 */

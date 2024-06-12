@@ -25,51 +25,6 @@ interface CoarseFreq_IFC;
     method Bool hasFixedSamples;
 endinterface: CoarseFreq_IFC
 
-//based on understanding dsp equation
-function REAL_SAMPLE_TYPE atan(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y);
- 
-    REAL_SAMPLE_TYPE xAbs = x;
-    REAL_SAMPLE_TYPE yAbs = y;
-    REAL_SAMPLE_TYPE x_ = x;
-    REAL_SAMPLE_TYPE y_ = y;
-    REAL_SAMPLE_TYPE ret = 0.0;
-
-    Bool yPos = True;
-
-    if (yAbs < 0.0) begin
-        yAbs = yAbs * -1.0;
-        yPos = False;
-    end
-
-    if (xAbs < 0.0) begin
-        xAbs = xAbs * -1.0;
-    end
-
-    //1th and 8th octants
-    if (x >= 0.0 && (xAbs > yAbs)) begin
-        ret = ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
-    end
-
-    //2nd and 3rd octants
-    if (y >= 0.0 && (yAbs >= xAbs)) begin
-        ret = 1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
-    end
-    //4th and 5th octants
-    if (x < 0.0 && (xAbs > yAbs)) begin
-        if (yPos == True) begin
-            ret = 3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
-        end 
-        else begin
-            ret = -3.14159 + ((x_ * y_) / ((x_ * x_) + (y_ * y_ * 0.28125)));
-        end 
-    end
-    if (y < 0.0 && (yAbs >= xAbs)) begin
-        ret = -1.570796 - ((x_ * y_) / ((y_ * y_) + (x_ * x_ * 0.28125)));
-    end
-    return fxptTruncate(ret);
-
-endfunction: atan
-
 module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Vector#(446, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
     Reg#(COMPLEX_SAMPLE_TYPE) out <- mkReg(0);
@@ -98,6 +53,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
     Reg#(Bit#(CBDATASIZE)) limitOut  <- mkCBRegRW(CRAddr{a: 8'd19, o:0}, fromInteger(cleanMask));
 
     Cordic_IFC cordic <- mkRotate;
+    Cordic_IFC atan <- mkAtan;
     
     Stmt fixError = seq
         
@@ -117,7 +73,7 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
             samples[n].img.f <= newSample.first.img.f & limitIn;
             newSample.deq;
         endseq
-        for (n <= 30; n < (30+4*fromInteger(sps)); n <= n+1) seq
+        for (n <= 30; n < (30+8*fromInteger(sps)); n <= n+1) seq
                 currSample <= samples[n];
                 currSample.rel.f <= currSample.rel.f & limitCurrS;
                 currSample.img.f <= currSample.img.f & limitCurrS;
@@ -132,7 +88,11 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
                 lastSample <= currSample;
         endseq
         // 1/(2*pi) = 0.159155
-        fsError <=  0.159155 * atan(accumError.rel, accumError.img);
+        atan.setPolar(accumError.rel, accumError.img, 0.0);
+        action
+        let z <- atan.getZ;
+        fsError <=  0.159155 * z;
+        endaction
         fsError.f <= fsError.f & limitError;
         
         for(n <= 0; n < fromInteger(loopFix); n <= n+1) seq
