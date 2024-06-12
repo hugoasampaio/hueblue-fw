@@ -58,6 +58,8 @@ module mkTb (Empty);
 		lr.start;
 		zV <= lr.result;
 
+		
+
 		coarseFreq.cbus_ifc.write(11, fromInteger(cleanMask) << currV.i);
 		coarseFreq.cbus_ifc.write(12, fromInteger(cleanMask) << lastV.i);
 		coarseFreq.cbus_ifc.write(13, fromInteger(cleanMask) << accumV.i);

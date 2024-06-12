@@ -158,13 +158,13 @@ def simulation_step(curr_lim: int, last_lim: int, accum_lim: int,
     #      "a:",accum_lim,"e:",error_lim, 
     #      "cf:",cplxFix_lim,"x:",xFix_lim,"y:",yFix_lim,
     #      " sqnr:", snr)
-    plt.figure(1)
-    plt.plot(reference_signal.real, '.-')
-    plt.plot(reference_signal.imag,'.-')
-    plt.figure(2)
-    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-    plt.show()
+    #plt.figure(1)
+    #plt.plot(reference_signal.real, '.-')
+    #plt.plot(reference_signal.imag,'.-')
+    #plt.figure(2)
+    #plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    #plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    #plt.show()
     #return snr
 
 for i in range(ITERATIONS):
@@ -204,7 +204,7 @@ def threaded_simulations(curr: int, last:int, accum:int,
 #              "min",  "{:.3f}".format(log.min()))
 
 simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
-
+print(snr_log[0])
 print(time.ctime())
 #simulated annealing
 

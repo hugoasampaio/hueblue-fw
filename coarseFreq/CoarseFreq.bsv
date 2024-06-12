@@ -112,37 +112,33 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
         fsError    <= 0;
         endaction
         for(n <= 0; n < fromInteger(loopFix); n <= n+1) seq
-            action
             samples[n] <= newSample.first;
+            samples[n].rel.f <= newSample.first.rel.f & limitIn;
+            samples[n].img.f <= newSample.first.img.f & limitIn;
             newSample.deq;
-            endaction
-            /*
-            samples[n].rel.f <= samples[n].rel.f & limitIn;
-            samples[n].img.f <= samples[n].rel.f & limitIn;
-            */
         endseq
         for (n <= 30; n < (30+4*fromInteger(sps)); n <= n+1) seq
                 currSample <= samples[n];
-                //currSample.rel.f <= currSample.rel.f & limitCurrS;
-                //currSample.img.f <= currSample.img.f & limitCurrS;
+                currSample.rel.f <= currSample.rel.f & limitCurrS;
+                currSample.img.f <= currSample.img.f & limitCurrS;
                 
                 lastSample.img <=  lastSample.img * -1.0; //conjugado
-                //lastSample.rel.f <= lastSample.rel.f & limitLastS;
-                //lastSample.img.f <= lastSample.img.f & limitLastS;
+                lastSample.rel.f <= lastSample.rel.f & limitLastS;
+                lastSample.img.f <= lastSample.img.f & limitLastS;
                 
                 accumError <= accumError + (currSample * lastSample);
-                //accumError.rel.f <= accumError.rel.f & limitAccumE;
-                //accumError.img.f <= accumError.img.f & limitAccumE;
+                accumError.rel.f <= accumError.rel.f & limitAccumE;
+                accumError.img.f <= accumError.img.f & limitAccumE;
                 lastSample <= currSample;
         endseq
         // 1/(2*pi) = 0.159155
         fsError <=  0.159155 * atan(accumError.rel, accumError.img);
-        //fsError.f <= fsError.f & limitError;
+        fsError.f <= fsError.f & limitError;
         
         for(n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             out <= samples[n] * cmplx(xFix, yFix);
-            //out.rel.f <= out.rel.f & limitOut;
-            //out.img.f <= out.img.f & limitOut; 
+            out.rel.f <= out.rel.f & limitOut;
+            out.img.f <= out.img.f & limitOut; 
             outSample.enq(out);
             cordic.setPolar(xFix, yFix, (-2.0 * 3.141593 * fsError));
             action
@@ -151,8 +147,8 @@ module [LimitedOps] mkCoarseFreq (CoarseFreq_IFC);
             xFix <= x_rot;
             yFix <= y_rot;
             endaction
-            //xFix.f <= xFix.f & limitXFix;
-            //yFix.f <= yFix.f & limitYFix;
+            xFix.f <= xFix.f & limitXFix;
+            yFix.f <= yFix.f & limitYFix;
         endseq
         //fxptWrite(6,fsError);
         //$display(" ");
