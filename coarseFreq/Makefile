@@ -12,7 +12,7 @@ hw_limited:
 
 hw_all12:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use \
-	-p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_all12.bsv
+	-p +:%/Libraries/FPGA/Misc/:../Cordic:../Constants Tb_Uart_all16.bsv
 	
 hw_opt:
 	bsc -verilog $(BSCFLAGS) -g mkTb -u -bdir obj -show-module-use \

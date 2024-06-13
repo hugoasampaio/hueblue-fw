@@ -36,6 +36,7 @@ interface Cordic_IFC;
     method Action setPolar(REAL_SAMPLE_TYPE x, REAL_SAMPLE_TYPE y, REAL_SAMPLE_TYPE z);
     method ActionValue #(REAL_SAMPLE_TYPE) getX();
     method ActionValue #(REAL_SAMPLE_TYPE) getY();
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
 endinterface: Cordic_IFC
 
@@ -124,12 +125,99 @@ module mkRotate (Cordic_IFC);
         //return y_;
     endmethod
 
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
+        return(0.0);
+    endmethod
+
     method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
         atanCalc.waitTillDone();
         return (cmplx(x2 * 0.607253, y2 * 0.607253));
     endmethod
 
 endmodule
+
+module mkAtan (Cordic_IFC);
+    Reg#(UInt#(4)) n <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) x_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) y_ <- mkReg(0);
+    Reg#(REAL_SAMPLE_TYPE) z_ <- mkReg(0);
+
+    FIFO#(REAL_SAMPLE_TYPE) x_in <- mkFIFO;
+    FIFO#(REAL_SAMPLE_TYPE) y_in <- mkFIFO;
+
+    FIFO#(REAL_SAMPLE_TYPE) z_out <- mkFIFO;
+
+    Stmt atanFSM = seq
+        action
+            x_ <= x_in.first;
+            y_ <= y_in.first;
+            x_in.deq;
+            y_in.deq;
+            z_ <= 0;
+        endaction
+        /*45 degree*/
+        while (x_ < 0.0) seq
+        action
+            if (y_ > 0.0) begin
+                x_ <= x_ + y_ ;
+                y_ <= y_ - x_ ;
+                z_ <= z_ + angles[0];
+            end else begin
+                x_ <= x_ - y_;
+                y_ <= y_ + x_;
+                z_ <= z_ - angles[0];
+            end
+            endaction
+        endseq
+        
+        for (n <=0; n < fromInteger(nAngles); n<=n+1) seq
+            action
+            if (y_ >= 0.0) begin
+                x_ <= x_ + (y_ >> n);
+                y_ <= y_ - (x_ >> n);
+                z_ <= z_ + angles[n];
+            end else begin
+                x_ <= x_ - (y_ >> n);
+                y_ <= y_ + (x_ >> n);
+                z_ <= z_ - angles[n];
+            end
+            endaction
+        endseq
+        action
+        z_out.enq(z_);
+        endaction
+    endseq;
+
+    FSM atanCalc <- mkFSM(atanFSM);
+
+    method Action setPolar(REAL_SAMPLE_TYPE x, 
+    REAL_SAMPLE_TYPE y, 
+    REAL_SAMPLE_TYPE z);
+        x_in.enq(x);
+        y_in.enq(y);
+        atanCalc.start;
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getX();
+        return (0.0);
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getY();
+        return (0.0);
+    endmethod
+
+    method ActionValue #(REAL_SAMPLE_TYPE) getZ();
+        let c = z_out.first;
+        z_out.deq;
+        return (c);
+    endmethod
+
+    method ActionValue #(COMPLEX_SAMPLE_TYPE) getPolar();
+        return (cmplx(0.0, 0.0));
+    endmethod
+
+endmodule: mkAtan
+
 endpackage : Cordic
 
 /*    
