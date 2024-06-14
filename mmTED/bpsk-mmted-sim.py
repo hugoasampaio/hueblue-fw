@@ -80,7 +80,7 @@ def perform_estimation_n_fix(rx_signal: np.array):
         conj = (rx * last_rx.conjugate())
         err_ += conj
         #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
-        if sum > 24*sps:
+        if sum > 8*sps:
             #print(((sps/2)/(np.pi*Tsymbol)))
             fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         last_rx = rx
@@ -128,8 +128,8 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
                     log: list, log_index: int):
 
     #print values to run bittrue simulation on bsv
-    in_file_name = "/tmp/dnm-sim-"+str(log_index)+"-py.log"
-    out_file_name = "/tmp/dnm-sim-"+str(log_index)+"-bsv.log"
+    in_file_name = "/tmp/mmted-sim-"+str(log_index)+"-py.log"
+    out_file_name = "/tmp/mmted-sim-"+str(log_index)+"-bsv.log"
     
     f = open(in_file_name, "w")
     print(f'{x_limiter}.0, {y_limiter}.0, {mu_limiter}.0, {out_limiter}.0, {mm_limiter}.0', 
@@ -147,15 +147,13 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
 
     #read values from bittrue simulation
     index = 0
-    mmted_corrected_bsv = np.zeros(samples_from_bsv+5, dtype=complex)
+    mmted_corrected_bsv = np.zeros(500, dtype=complex)
     bsv_file = open(out_file_name, "r")
     for line in bsv_file:
         number = line.split(",")
         cmplx = complex(float(number[0]), float(number[1]))
         mmted_corrected_bsv[index] = cmplx
         index += 1
-        if index > samples_from_bsv:
-            break
     bsv_file.close()
     #compare to python values
 
@@ -165,13 +163,13 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
                mmted_corrected_bsv[0:index-1])
     log[log_index] = sqnrVal
           
-    #plt.figure(3)
-    #plt.plot(reference_signal.real[0:index-1], '.-')
-    #plt.plot(reference_signal.imag[0:index-1],'.-')
+    plt.figure(3)
+    plt.plot(reference_signal.real[0:index-1], '.-')
+    plt.plot(reference_signal.imag[0:index-1],'.-')
     #plt.figure(4)
-    #plt.plot(mmted_corrected_bsv.real[0:index-1],'.-') 
-    #plt.plot(mmted_corrected_bsv.imag[0:index-1], '.-')
-    #plt.show()
+    plt.plot(mmted_corrected_bsv.real[0:index-1],'.-') 
+    plt.plot(mmted_corrected_bsv.imag[0:index-1], '.-')
+    plt.show()
 
 def threaded_simulations(x: int, y:int, mu:int, out:int, mm:int):
     threads = [None] * ITERATIONS
@@ -201,8 +199,8 @@ def full_simulation():
 
 simulation_step(0, 0, 0, 0, 0, base_signal[0], fixed_signal[0], snr_log, 0)
 print("sqnr:", "{:.3f}".format(snr_log[0]))
-simulation_step(6, 6, 4, 6, 6, base_signal[0], fixed_signal[0], snr_log, 0)
-print("sqnr:", "{:.3f}".format(snr_log[0]))
+#simulation_step(6, 6, 4, 6, 6, base_signal[0], fixed_signal[0], snr_log, 0)
+#print("sqnr:", "{:.3f}".format(snr_log[0]))
 
 #full_simulation()
 print(time.ctime())

@@ -1,4 +1,4 @@
-package Tb_python;
+package Tb_python_limited;
 
 import MMTED_limited::*;
 import StmtFSM::*;
@@ -27,12 +27,16 @@ module mkTb (Empty);
     Stmt test = seq
 		lr.start;
 		xV <= lr.result;
+
 		lr.start;
 		yV <= lr.result;
+		
 		lr.start;
 		muV <= lr.result;
+		
 		lr.start;
 		inV <= lr.result;
+		
 		lr.start;
 		mmV <= lr.result;
 
@@ -134,4 +138,4 @@ module mkLineReader(LineReader);
 	method result if (fsm.done) = number;
 
 endmodule: mkLineReader
-endpackage: Tb_python
+endpackage: Tb_python_limited

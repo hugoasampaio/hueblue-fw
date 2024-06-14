@@ -28,15 +28,15 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
     Reg#(REAL_SAMPLE_TYPE) mu <-mkReg(0);
     Vector#(445, Reg#(COMPLEX_SAMPLE_TYPE)) samples <- replicateM(mkReg(0));
     FIFOF#(COMPLEX_SAMPLE_TYPE) outF  <- mkSizedFIFOF(445);
-    Vector#(3, Reg#(COMPLEX_SAMPLE_TYPE)) out  <- replicateM(mkReg(0));
-    Vector#(3, Reg#(COMPLEX_SAMPLE_TYPE)) outRail  <- replicateM(mkReg(0));
+    Vector#(445, Reg#(COMPLEX_SAMPLE_TYPE)) out  <- replicateM(mkReg(0));
+    Vector#(445, Reg#(COMPLEX_SAMPLE_TYPE)) outRail  <- replicateM(mkReg(0));
     Reg#(UInt#(12)) iIn <- mkReg(0);
     Reg#(UInt#(12)) iOut <- mkReg(2);
     Reg#(UInt#(12)) n <- mkReg(0);
+
     Reg#(COMPLEX_SAMPLE_TYPE) x <- mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) y <- mkReg(0);
-    Reg#(COMPLEX_SAMPLE_TYPE) x2 <- mkReg(0);
-    Reg#(COMPLEX_SAMPLE_TYPE) y2 <- mkReg(0);
+
     FIFO#(COMPLEX_SAMPLE_TYPE) newSample  <- mkFIFO;
     Reg#(REAL_SAMPLE_TYPE) mmVal <- mkReg(0);
 
@@ -48,14 +48,12 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
 
     Stmt calcError = seq
         for (n <= 0; n < 440; n <= n+1) seq
-            action
             samples[n]<= newSample.first;
             newSample.deq;
-            endaction
-            samples[n].rel.f <= samples[n].rel.f & limitX;
-            samples[n].img.f <= samples[n].img.f & limitX;
+            samples[n].rel.f <= samples[n].rel.f & limitIn;
+            samples[n].img.f <= samples[n].img.f & limitIn;
         endseq
-        while (iOut < 440 && iIn+16 < 440) seq
+        while (iOut < 440 && iIn+4 < 440) seq
             action
             out[2] <= out[1];
             out[1] <= out[0];
@@ -63,7 +61,7 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             outRail[2] <= outRail[1];
             outRail[1] <= outRail[0];
             outRail[0] <= cmplx( (samples[iIn].rel > 0.0 ? 1.0 : 0.0) ,  
-                                    (samples[iIn].img > 0.0 ? 1.0 : 0.0));
+                                 (samples[iIn].img > 0.0 ? 1.0 : 0.0));                   
             if (iOut > 1) begin
                 outF.enq(samples[iIn]);
             end
@@ -72,16 +70,15 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             x <= (outRail[0] - outRail[2]) * (outRail[1] * cmplx(1.0, -1.0));
             y <= (out[0] - out[2]) * (outRail[1] * cmplx(1.0, -1.0));
             endaction
-            action
-            //apply limits
-            x2.rel.f <= x.rel.f & limitX;
-            y2.rel.f <= y.rel.f & limitY;
-            endaction
-            action
-            x2.img.f <= x.img.f & limitX;
-            y2.img.f <= y.img.f & limitY;
-            endaction
-            mmVal <= y2.rel-x2.rel;
+            
+            /* apply limits */
+            x.rel.f <= x.rel.f & limitX;
+            x.img.f <= x.img.f & limitX;
+
+            y.rel.f <= y.rel.f & limitY;
+            y.img.f <= y.img.f & limitY;
+            
+            mmVal <= y.rel-x.rel;
             mmVal.f <= mmVal.f & limitmm;
             mu <= mu + fromInteger(sps) + (0.3 * mmVal);
             iIn <= iIn + unpack(mu.i);
@@ -89,15 +86,7 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             mu.f <= mu.f & limitMu;
             iOut <= iOut + 1;
         endseq
-        //$display("iout: ", iOut);
-        /*
-        for (n <= 2; n < iOut; n <= n +1 ) action
-            fxptWrite(6, out[n].rel);
-            $write(", ");
-            fxptWrite(6, out[n].img);
-            $display(" ");
-        endaction
-        */
+
     endseq;
 
     FSM tedErrorCalc <- mkFSM(calcError);
