@@ -170,9 +170,9 @@ module [LimitedOps] mkAtan (Cordic_IFC);
 
     FIFO#(REAL_SAMPLE_TYPE) z_out <- mkFIFO;
 
-    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd41, o:0}, fromInteger(cleanMask));
-    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd42, o:0}, fromInteger(cleanMask));
-    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd43, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitX <- mkCBRegRW(CRAddr{a: 8'd44, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitY <- mkCBRegRW(CRAddr{a: 8'd45, o:0}, fromInteger(cleanMask));
+    Reg#(Bit#(CBDATASIZE)) limitZ <- mkCBRegRW(CRAddr{a: 8'd46, o:0}, fromInteger(cleanMask));
 
     Stmt atanFSM = seq
         action
