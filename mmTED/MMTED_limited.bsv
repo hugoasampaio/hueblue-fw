@@ -36,9 +36,11 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
 
     Reg#(COMPLEX_SAMPLE_TYPE) x <- mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) y <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) conjO <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) conjOR <- mkReg(0);
 
     FIFO#(COMPLEX_SAMPLE_TYPE) newSample  <- mkFIFO;
-    Reg#(REAL_SAMPLE_TYPE) mmVal <- mkReg(0);
+    Reg#(COMPLEX_SAMPLE_TYPE) mmVal <- mkReg(0);
 
     Reg#(Bit#(CBDATASIZE)) limitX  <- mkCBRegRW(CRAddr{a: 8'd21, o:0},fromInteger(cleanMask));
     Reg#(Bit#(CBDATASIZE)) limitY  <- mkCBRegRW(CRAddr{a: 8'd22, o:0},fromInteger(cleanMask));
@@ -48,39 +50,50 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
 
     Stmt calcError = seq
         for (n <= 0; n < 440; n <= n+1) seq
+            action
             samples[n]<= newSample.first;
             newSample.deq;
+            endaction
             samples[n].rel.f <= samples[n].rel.f & limitIn;
             samples[n].img.f <= samples[n].img.f & limitIn;
         endseq
-        while (iOut < 440 && iIn+4 < 440) seq
+        while (iOut < 440 && iIn+16 < 440) seq
             action
             out[2] <= out[1];
             out[1] <= out[0];
             out[0] <= samples[iIn];
             outRail[2] <= outRail[1];
             outRail[1] <= outRail[0];
-            outRail[0] <= cmplx( (samples[iIn].rel > 0.0 ? 1.0 : 0.0) ,  
-                                 (samples[iIn].img > 0.0 ? 1.0 : 0.0));                   
+            outRail[0] <= cmplx((samples[iIn].rel > 0.0 ? 1.0 : 0.0),
+                                (samples[iIn].img > 0.0 ? 1.0 : 0.0));
             if (iOut > 1) begin
                 outF.enq(samples[iIn]);
             end
             endaction
             action
-            x <= (outRail[0] - outRail[2]) * (outRail[1] * cmplx(1.0, -1.0));
-            y <= (out[0] - out[2]) * (outRail[1] * cmplx(1.0, -1.0));
+            conjO <= out[1];
+            conjOR <= outRail[1];
             endaction
-            
+            action
+            conjO.img <= conjO.img * -1.0;
+            conjOR.img <= conjOR.img * -1.0;
+            endaction
+            action
+            x <= (outRail[0] - outRail[2]) * conjO;
+            y <= (out[0] - out[2])         * conjOR;
+            endaction
             /* apply limits */
+            action
             x.rel.f <= x.rel.f & limitX;
-            x.img.f <= x.img.f & limitX;
-
             y.rel.f <= y.rel.f & limitY;
+            endaction
+            action
+            x.img.f <= x.img.f & limitX;
             y.img.f <= y.img.f & limitY;
-            
-            mmVal <= y.rel-x.rel;
-            mmVal.f <= mmVal.f & limitmm;
-            mu <= mu + fromInteger(sps) + (0.3 * mmVal);
+            endaction            
+            mmVal <= y-x;
+            mmVal.rel.f <= mmVal.rel.f & limitmm;
+            mu <= mu + fromInteger(sps) + (0.3 * mmVal.rel);
             iIn <= iIn + unpack(mu.i);
             mu.i <= 0;
             mu.f <= mu.f & limitMu;

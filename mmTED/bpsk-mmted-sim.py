@@ -8,7 +8,7 @@ import commpy.filters as filter
 from threading import Thread
 
 print(time.ctime())
-ITERATIONS = 1000
+ITERATIONS = 100
 base_signal = [0] * ITERATIONS
 fixed_signal = [0] * ITERATIONS
 snr_log = [0] * ITERATIONS
@@ -111,7 +111,7 @@ def mmted(rx_signal_downsampled: np.array):
         #out[i_out] = samples_interpolated[i_in*16 + int(mu*16)]
         out_rail[i_out] = int(np.real(out[i_out]) > 0) + 1j*int(np.imag(out[i_out]) > 0)
         x = (out_rail[i_out] - out_rail[i_out-2]) * np.conj(out[i_out-1])
-        y = (out[i_out] - out[i_out-2]) * np.conj(out_rail[i_out-1])
+        y = (out[i_out] - out[i_out-2])           * np.conj(out_rail[i_out-1])
         mm_val = np.real(y - x)
         mu += sps + 0.3*mm_val
         i_in += int(np.floor(mu)) # round down to nearest int since we are using it as an index
@@ -156,6 +156,7 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
         index += 1
     bsv_file.close()
     #compare to python values
+    index = min(len(reference_signal), index)
 
     #for i in range(30, 40):
     #    print("py: ", coarse_freq_corrected_python[i], " bsv: ", coarse_freq_corrected_bsv[i])
@@ -163,13 +164,14 @@ def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
                mmted_corrected_bsv[0:index-1])
     log[log_index] = sqnrVal
           
-    plt.figure(3)
-    plt.plot(reference_signal.real[0:index-1], '.-')
-    plt.plot(reference_signal.imag[0:index-1],'.-')
-    #plt.figure(4)
-    plt.plot(mmted_corrected_bsv.real[0:index-1],'.-') 
-    plt.plot(mmted_corrected_bsv.imag[0:index-1], '.-')
-    plt.show()
+    #if sqnrVal < 5.0:
+    #    plt.figure(3)
+    #    plt.plot(reference_signal.real[0:index-1], '.-')
+    #    plt.plot(reference_signal.imag[0:index-1],'.-')
+        #plt.figure(4)
+    #    plt.plot(mmted_corrected_bsv.real[0:index-1],'.-') 
+    #    plt.plot(mmted_corrected_bsv.imag[0:index-1], '.-')
+    #    plt.show()
 
 def threaded_simulations(x: int, y:int, mu:int, out:int, mm:int):
     threads = [None] * ITERATIONS
@@ -197,10 +199,20 @@ def full_simulation():
                                 "min:", "{:.3f}".format(log.min()),
                                 "WL:", x, y, mu, out, mm)
 
-simulation_step(0, 0, 0, 0, 0, base_signal[0], fixed_signal[0], snr_log, 0)
-print("sqnr:", "{:.3f}".format(snr_log[0]))
-#simulation_step(6, 6, 4, 6, 6, base_signal[0], fixed_signal[0], snr_log, 0)
-#print("sqnr:", "{:.3f}".format(snr_log[0]))
+def one_sim_batch():
+    threaded_simulations(6,6,6,6,6)
+    log = np.array(snr_log)
+    print("mean:", "{:.3f}".format(log.mean()), "std:", "{:.3f}".format(log.std()), "min:", "{:.3f}".format(log.min()))
+
+def one_sim_graph():
+    for i in range(ITERATIONS):
+        simulation_step(0, 0, 0, 0, 0, base_signal[i], fixed_signal[i], snr_log, i)
+        #print("sqnr:", "{:.3f}".format(snr_log[i]))
+    log = np.array(snr_log)
+    print("mean:", "{:.3f}".format(log.mean()), "std:", "{:.3f}".format(log.std()), "min:", "{:.3f}".format(log.min()))
+
+
+one_sim_batch()
 
 #full_simulation()
 print(time.ctime())
