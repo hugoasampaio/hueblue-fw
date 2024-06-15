@@ -5,35 +5,35 @@ import Vector::*;
 import FIFO::*;
 import StmtFSM::*;
 import FixedPoint::*;
-import Cordic::*;
+import Cordic_cl::*;
 import Constants::*;
 
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
-
+/*optimal: [11, 12, 6, 11, 11, 9, 9, 11]*/
 interface CostasLoop_IFC;
-    method Action addSample (COMPLEX_SAMPLE_TYPE ns);
-    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSample;
-    method ActionValue #(REAL_SAMPLE_TYPE) getError;
+    method Action addSample (Complex#(FixedPoint#(4, 7)) ns);
+    method ActionValue #(Complex#(FixedPoint#(4, 7))) getFixedSample;
+    method ActionValue #(FixedPoint#(4, 7)) getError;
 endinterface: CostasLoop_IFC
 
 module mkCostasLoop (CostasLoop_IFC);
 
-    FIFO#(COMPLEX_SAMPLE_TYPE) inSample <- mkFIFO;
-    FIFO#(COMPLEX_SAMPLE_TYPE) outSample <- mkFIFO;
-    Reg#(COMPLEX_SAMPLE_TYPE) sample <- mkReg(0);
+    FIFO#(Complex#(FixedPoint#(4, 7))) inSample <- mkFIFO;
+    FIFO#(Complex#(FixedPoint#(4, 7))) outSample <- mkFIFO;
+    Reg#(Complex#(FixedPoint#(4, 7))) sample <- mkReg(0);
 
-    Reg#(FixedPoint#(INTEGERSIZE, 6)) phase <- mkReg(0);
-    Reg#(FixedPoint#(INTEGERSIZE, 9)) freq <- mkReg(0);
-    Reg#(FixedPoint#(INTEGERSIZE, 6)) error <- mkReg(0);
+    Reg#(FixedPoint#(4, 6)) phase <- mkReg(0);
+    Reg#(FixedPoint#(4, 9)) freq <- mkReg(0);
+    Reg#(FixedPoint#(4, 6)) error <- mkReg(0);
 
     Cordic_IFC fixFxError <- mkRotate;
     
     Stmt calcError = seq
         //sample <= inSample.first;
         action
-        fixFxError.setPolar(inSample.first.rel, inSample.first.img, fxptSignExtend(-phase));
+        fixFxError.setPolar(inSample.first.rel, inSample.first.img, fxptTruncate(-phase));
         inSample.deq;
         endaction
         action
@@ -63,17 +63,17 @@ module mkCostasLoop (CostasLoop_IFC);
         costasL.start;
     endrule
 
-    method Action addSample (COMPLEX_SAMPLE_TYPE ns);
+    method Action addSample (Complex#(FixedPoint#(4, 7)) ns);
         inSample.enq(ns);
     endmethod
 
-    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSample;
+    method ActionValue #(Complex#(FixedPoint#(4, 7))) getFixedSample;
         let ret = outSample.first;
         outSample.deq;
         return ret;
     endmethod
 
-    method ActionValue #(REAL_SAMPLE_TYPE) getError;
+    method ActionValue #(FixedPoint#(4, 7)) getError;
         return fxptSignExtend(error);
     endmethod
 

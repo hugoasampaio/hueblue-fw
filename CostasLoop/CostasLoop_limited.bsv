@@ -44,10 +44,10 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
     Cordic_IFC fixFxError <- mkRotate;
     
     Stmt calcError = seq
-        action
+        //action
         inSample <= inSampleF.first;
         inSampleF.deq;
-        endaction
+        //endaction
         inSample.rel.f <= inSample.rel.f & limitIn;
         inSample.img.f <= inSample.img.f & limitIn;
         fixFxError.setPolar(inSample.rel, inSample.img, -phase);
@@ -57,10 +57,10 @@ module [LimitedOps] mkCostasLoop (CostasLoop_IFC);
         endaction
         outSample.rel.f <= outSample.rel.f & limitOut;
         outSample.img.f <= outSample.img.f & limitOut;
-        action
+        //action
         outSampleF.enq(outSample);
         error <= outSample.rel * outSample.img;
-        endaction
+        //endaction
         error.f <= error.f & limitError;
         freq <= freq + (error * 0.00932);
         freq.f <= freq.f & limitFreqs;
