@@ -34,16 +34,15 @@ module mkTb#(Clock clk_uart) (UartIface);
     mkConnection(toPut(fifo_uart_rx), uart.tx);
 
     //REGs for sim
-    Reg#(FixedPoint#(3, 12)) realValue <-mkReg(0);
-    Reg#(FixedPoint#(3, 12)) imagValue <-mkReg(0);
-    Reg#(Complex#(FixedPoint#(3, 12)) ) fixValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 4)) realValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 4)) imagValue <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 4)) ) fixValue <-mkReg(0);
 
     Reg#(Bit#(32)) real_bytes <-mkReg(0);
     Reg#(Bit#(32)) imag_bytes <-mkReg(0);
     Reg#(Bit#(64)) fix_bytes <-mkReg(0);
 
     Reg#(UInt#(10)) n <- mkReg(0);
-
  
     Stmt test = seq
 		
@@ -65,7 +64,7 @@ module mkTb#(Clock clk_uart) (UartIface);
             fifo_uart_rx.deq;
             endaction
             realValue.i <= unpack(real_bytes[3+15:16]);
-            realValue.f <= unpack(real_bytes[15:16-12]);
+            realValue.f <= unpack(real_bytes[15:12]);
 
             action
             imag_bytes[31:24] <= fifo_uart_rx.first;
@@ -84,7 +83,7 @@ module mkTb#(Clock clk_uart) (UartIface);
             fifo_uart_rx.deq;
             endaction
             imagValue.i <= unpack(imag_bytes[3+15:16]);
-            imagValue.f <= unpack(imag_bytes[15:16-12]);
+            imagValue.f <= unpack(imag_bytes[15:12]);
 
 			mmTed.addSample(cmplx(realValue, imagValue));
 		endseq
@@ -94,10 +93,10 @@ module mkTb#(Clock clk_uart) (UartIface);
 			fixValue <= fix;
             endaction
             fix_bytes <= 0;
-            fix_bytes[50:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:36] <= pack(fixValue.rel.f);
-            fix_bytes[18:16] <= pack(fixValue.img.i);
-            fix_bytes[15:04] <= pack(fixValue.img.f);
+            fix_bytes[51:48] <= pack(fixValue.rel.i);
+            fix_bytes[47:44] <= pack(fixValue.rel.f);
+            fix_bytes[19:16] <= pack(fixValue.img.i);
+            fix_bytes[15:12] <= pack(fixValue.img.f);
 
             
             fifo_uart_tx.enq(fix_bytes[63:56]);

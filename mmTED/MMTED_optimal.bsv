@@ -13,28 +13,28 @@ Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 
 interface MMTED_IFC;
-    method Action addSample (Complex#(FixedPoint#(3, 12))  sample);
-    //method ActionValue #(FixedPoint#(8, 12)) getError;
-    method ActionValue #(Complex#(FixedPoint#(3, 12)) ) getFixedSample;
+    method Action addSample (Complex#(FixedPoint#(4, 4))  sample);
+    method ActionValue #(Complex#(FixedPoint#(4, 4)) ) getFixedSample;
     method Bool hasFixedSample;
 endinterface: MMTED_IFC
-
+/*[15, 14, 12, 12, 14]*/
 module mkMMTED (MMTED_IFC);
 
-    Reg#(FixedPoint#(10, 12)) mu <-mkReg(0);
-    Vector#(445, Reg#(Complex#(FixedPoint#(3, 12)) )) samples <- replicateM(mkReg(0));
-    FIFOF#(Complex#(FixedPoint#(3, 12)) ) outF  <- mkSizedFIFOF(445);
-    Vector#(3, Reg#(Complex#(FixedPoint#(3, 12)) )) out  <- replicateM(mkReg(0));
-    Vector#(3, Reg#(Complex#(FixedPoint#(3, 12)) )) outRail  <- replicateM(mkReg(0));
+    Reg#(FixedPoint#(10, 4)) mu <-mkReg(0);
+    Vector#(445, Reg#(Complex#(FixedPoint#(4, 4)) )) samples <- replicateM(mkReg(0));
+    FIFOF#(Complex#(FixedPoint#(4, 4)) ) outF  <- mkSizedFIFOF(445);
+    Vector#(3, Reg#(Complex#(FixedPoint#(4, 4)) )) out  <- replicateM(mkReg(0));
+    Vector#(3, Reg#(Complex#(FixedPoint#(4, 4)) )) outRail  <- replicateM(mkReg(0));
     Reg#(UInt#(10)) iIn <- mkReg(0);
-    Reg#(UInt#(12)) iOut <- mkReg(2);
+    Reg#(UInt#(10)) iOut <- mkReg(2);
     Reg#(UInt#(12)) n <- mkReg(0);
-    Reg#(Complex#(FixedPoint#(3, 12)) ) x <- mkReg(0);
-    Reg#(Complex#(FixedPoint#(3, 12)) ) y <- mkReg(0);
-    Reg#(Complex#(FixedPoint#(3, 12)) ) x2 <- mkReg(0);
-    Reg#(Complex#(FixedPoint#(3, 12)) ) y2 <- mkReg(0);
-    FIFO#(Complex#(FixedPoint#(3, 12)) ) newSample  <- mkFIFO;
-    Reg#(FixedPoint#(3, 12)) mmVal <- mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 4))) x <- mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 4))) y <- mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 4))) conjO <- mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 4))) conjOR <- mkReg(0);
+
+    FIFO#(Complex#(FixedPoint#(4, 4))) newSample  <- mkFIFO;
+    Reg#(Complex#(FixedPoint#(4, 4))) mmVal <- mkReg(0);
 
     Stmt calcError = seq
         for (n <= 0; n < 440; n <= n+1) action
@@ -55,16 +55,22 @@ module mkMMTED (MMTED_IFC);
             end
             endaction
             action
-            x <= (outRail[0] - outRail[2]) * (outRail[1] * cmplx(1.0, -1.0));
-            y <= (out[0] - out[2]) * (outRail[1] * cmplx(1.0, -1.0));
+            conjO <= out[1];
+            conjOR <= outRail[1];
             endaction
-            mmVal <= y2.rel-x2.rel;
-            mu <= mu + fromInteger(sps) + fxptSignExtend(0.3 * mmVal);
-            iIn <= iIn + unpack(mu.i);
             action
+            conjO.img <= conjO.img * -1.0;
+            conjOR.img <= conjOR.img * -1.0;
+            endaction
+            action
+            x <= (outRail[0] - outRail[2]) * conjO;
+            y <= (out[0] - out[2])         * conjOR;
+            endaction
+            mmVal <= y-x;
+            mu <= mu + fromInteger(sps) + fxptSignExtend(0.3 * mmVal.rel);
+            iIn <= iIn + unpack(mu.i);
             mu.i <= 0;
             iOut <= iOut + 1;
-            endaction
         endseq
     endseq;
 
@@ -74,7 +80,7 @@ module mkMMTED (MMTED_IFC);
         tedErrorCalc.start;
     endrule
 
-    method Action addSample (Complex#(FixedPoint#(3, 12))  sample);
+    method Action addSample (Complex#(FixedPoint#(4, 4))  sample);
         newSample.enq(sample);
     endmethod
 
@@ -85,7 +91,7 @@ module mkMMTED (MMTED_IFC);
     endmethod
     */
     
-    method ActionValue #(Complex#(FixedPoint#(3, 12)) ) getFixedSample;
+    method ActionValue #(Complex#(FixedPoint#(4, 4)) ) getFixedSample;
         let x = outF.first();
         outF.deq;
         return x;
