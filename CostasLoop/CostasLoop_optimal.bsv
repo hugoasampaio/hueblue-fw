@@ -13,27 +13,29 @@ Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 /*optimal: [11, 12, 6, 11, 11, 9, 9, 11]*/
 interface CostasLoop_IFC;
-    method Action addSample (Complex#(FixedPoint#(4, 7)) ns);
-    method ActionValue #(Complex#(FixedPoint#(4, 7))) getFixedSample;
-    method ActionValue #(FixedPoint#(4, 7)) getError;
+    method Action addSample (Complex#(FixedPoint#(4, 1)) ns);
+    method ActionValue #(Complex#(FixedPoint#(4, 3))) getFixedSample;
+    method ActionValue #(FixedPoint#(4, 1)) getError;
 endinterface: CostasLoop_IFC
 
 module mkCostasLoop (CostasLoop_IFC);
 
-    FIFO#(Complex#(FixedPoint#(4, 7))) inSample <- mkFIFO;
-    FIFO#(Complex#(FixedPoint#(4, 7))) outSample <- mkFIFO;
-    Reg#(Complex#(FixedPoint#(4, 7))) sample <- mkReg(0);
+    FIFO#(Complex#(FixedPoint#(4, 1))) inSample <- mkFIFO;
+    FIFO#(Complex#(FixedPoint#(4, 3))) outSample <- mkFIFO;
+    Reg#(Complex#(FixedPoint#(4, 3))) sample <- mkReg(0);
 
-    Reg#(FixedPoint#(4, 6)) phase <- mkReg(0);
-    Reg#(FixedPoint#(4, 9)) freq <- mkReg(0);
-    Reg#(FixedPoint#(4, 6)) error <- mkReg(0);
+    Reg#(FixedPoint#(4, 1)) phase <- mkReg(0);
+    Reg#(FixedPoint#(4, 6)) freq <- mkReg(0);
+    Reg#(FixedPoint#(4, 1)) error <- mkReg(0);
 
     Cordic_IFC fixFxError <- mkRotate;
     
     Stmt calcError = seq
         //sample <= inSample.first;
         action
-        fixFxError.setPolar(inSample.first.rel, inSample.first.img, fxptTruncate(-phase));
+        fixFxError.setPolar(fxptSignExtend(inSample.first.rel), 
+                            fxptSignExtend(inSample.first.img), 
+                            fxptTruncate(-phase));
         inSample.deq;
         endaction
         action
@@ -63,17 +65,17 @@ module mkCostasLoop (CostasLoop_IFC);
         costasL.start;
     endrule
 
-    method Action addSample (Complex#(FixedPoint#(4, 7)) ns);
+    method Action addSample (Complex#(FixedPoint#(4, 1)) ns);
         inSample.enq(ns);
     endmethod
 
-    method ActionValue #(Complex#(FixedPoint#(4, 7))) getFixedSample;
+    method ActionValue #(Complex#(FixedPoint#(4, 3))) getFixedSample;
         let ret = outSample.first;
         outSample.deq;
         return ret;
     endmethod
 
-    method ActionValue #(FixedPoint#(4, 7)) getError;
+    method ActionValue #(FixedPoint#(4, 1)) getError;
         return fxptSignExtend(error);
     endmethod
 

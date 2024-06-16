@@ -32,9 +32,9 @@ module mkTb#(Clock clk_uart) (UartIface);
     mkConnection(toGet(fifo_uart_tx), uart.rx);
     mkConnection(toPut(fifo_uart_rx), uart.tx);
 
-    Reg#(FixedPoint#(4, 7)) realValue <-mkReg(0);
-    Reg#(FixedPoint#(4, 7)) imagValue <-mkReg(0);
-    Reg#(Complex#(FixedPoint#(4, 7))) fixValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 1)) realValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 1)) imagValue <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 3))) fixValue <-mkReg(0);
 
     Reg#(Bit#(32)) real_bytes <-mkReg(0);
     Reg#(Bit#(32)) imag_bytes <-mkReg(0);
@@ -61,7 +61,7 @@ module mkTb#(Clock clk_uart) (UartIface);
             fifo_uart_rx.deq;
             endaction
             realValue.i <= unpack(real_bytes[4+15:16]);
-            realValue.f <= unpack(real_bytes[15:16-7]);
+            realValue.f <= unpack(real_bytes[15]);
 
             action
             imag_bytes[31:24] <= fifo_uart_rx.first;
@@ -80,7 +80,7 @@ module mkTb#(Clock clk_uart) (UartIface);
             fifo_uart_rx.deq;
             endaction
             imagValue.i <= unpack(imag_bytes[4+15:16]);
-            imagValue.f <= unpack(imag_bytes[15:16-7]);
+            imagValue.f <= unpack(imag_bytes[15]);
     
             cc.addSample(cmplx(realValue , imagValue));
             action
@@ -90,9 +90,9 @@ module mkTb#(Clock clk_uart) (UartIface);
             fix_bytes <= 0;
             
             fix_bytes[51:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:41] <= pack(fixValue.rel.f);
+            fix_bytes[47:45] <= pack(fixValue.rel.f);
             fix_bytes[19:16] <= pack(fixValue.img.i);
-            fix_bytes[15:09] <= pack(fixValue.img.f);
+            fix_bytes[15:13] <= pack(fixValue.img.f);
             
             fifo_uart_tx.enq(fix_bytes[63:56]);
             fifo_uart_tx.enq(fix_bytes[55:48]);

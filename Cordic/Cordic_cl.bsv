@@ -9,7 +9,7 @@ import Constants::*;
 
 Integer nAngles = 14;
 
-FixedPoint#(4, 5) angles[nAngles] = {
+FixedPoint#(4, 1) angles[nAngles] = {
     0.7853981634,           //2^0
     0.46364760905065,       //2^-1
     0.24497866316245,       //2^-2
@@ -26,31 +26,31 @@ FixedPoint#(4, 5) angles[nAngles] = {
     0.00012207031755953    //2^-13
 };
 
-FixedPoint#(4, 7) kForNinety = 0.70712;
+FixedPoint#(4, 3) kForNinety = 0.70712;
 
 interface Cordic_IFC;
-    method Action setPolar(FixedPoint#(4, 7) x, 
-                           FixedPoint#(4, 7) y, 
-                           FixedPoint#(4, 5) z);
-    method ActionValue #(FixedPoint#(4, 7)) getX();
-    method ActionValue #(FixedPoint#(4, 7)) getY();
-    method ActionValue #(FixedPoint#(4, 5)) getZ();
-    method ActionValue #(Complex#(FixedPoint#(4, 7))) getPolar();
+    method Action setPolar(FixedPoint#(4, 3) x, 
+                           FixedPoint#(4, 3) y, 
+                           FixedPoint#(4, 1) z);
+    method ActionValue #(FixedPoint#(4, 3)) getX();
+    method ActionValue #(FixedPoint#(4, 3)) getY();
+    method ActionValue #(FixedPoint#(4, 1)) getZ();
+    method ActionValue #(Complex#(FixedPoint#(4, 3))) getPolar();
 endinterface: Cordic_IFC
 
 module mkRotate (Cordic_IFC);
     Reg#(UInt#(4)) n <- mkReg(0);
-    Reg#(FixedPoint#(4, 7)) x_ <- mkReg(0);
-    Reg#(FixedPoint#(4, 7)) y_ <- mkReg(0);
-    Reg#(FixedPoint#(4, 5)) z_ <- mkReg(0);
+    Reg#(FixedPoint#(4, 3)) x_ <- mkReg(0);
+    Reg#(FixedPoint#(4, 3)) y_ <- mkReg(0);
+    Reg#(FixedPoint#(4, 1)) z_ <- mkReg(0);
 
-    Reg#(FixedPoint#(4, 7)) x2 <- mkReg(0);
-    Reg#(FixedPoint#(4, 7)) y2 <- mkReg(0);
-    Reg#(FixedPoint#(4, 5)) z2 <- mkReg(0);
+    Reg#(FixedPoint#(4, 3)) x2 <- mkReg(0);
+    Reg#(FixedPoint#(4, 3)) y2 <- mkReg(0);
+    Reg#(FixedPoint#(4, 1)) z2 <- mkReg(0);
 
-    FIFO#(FixedPoint#(4, 7)) x_in <- mkFIFO;
-    FIFO#(FixedPoint#(4, 7)) y_in <- mkFIFO;
-    FIFO#(FixedPoint#(4, 5)) z_in <- mkFIFO;
+    FIFO#(FixedPoint#(4, 3)) x_in <- mkFIFO;
+    FIFO#(FixedPoint#(4, 3)) y_in <- mkFIFO;
+    FIFO#(FixedPoint#(4, 1)) z_in <- mkFIFO;
     
     Stmt cordicFSM = seq
         action
@@ -103,31 +103,31 @@ module mkRotate (Cordic_IFC);
         atanCalc.start;
     endrule
 
-    method Action setPolar(FixedPoint#(4, 7) x, 
-    FixedPoint#(4, 7) y, 
-    FixedPoint#(4, 5) z);
+    method Action setPolar(FixedPoint#(4, 3) x, 
+    FixedPoint#(4, 3) y, 
+    FixedPoint#(4, 1) z);
         x_in.enq(x);
         y_in.enq(y);
         z_in.enq(z);
     endmethod
 
-    method ActionValue #(FixedPoint#(4, 7)) getX();
+    method ActionValue #(FixedPoint#(4, 3)) getX();
         atanCalc.waitTillDone();
         return (x2 * 0.607253);
         //return x_;
     endmethod
 
-    method ActionValue #(FixedPoint#(4, 7)) getY();
+    method ActionValue #(FixedPoint#(4, 3)) getY();
         atanCalc.waitTillDone();
         return (y2 * 0.607253);
         //return y_;
     endmethod
 
-    method ActionValue #(FixedPoint#(4, 5)) getZ();
+    method ActionValue #(FixedPoint#(4, 1)) getZ();
         return(0.0);
     endmethod
 
-    method ActionValue #(Complex#(FixedPoint#(4, 7))) getPolar();
+    method ActionValue #(Complex#(FixedPoint#(4, 3))) getPolar();
         atanCalc.waitTillDone();
         return (cmplx(x2 * 0.607253, y2 * 0.607253));
     endmethod
