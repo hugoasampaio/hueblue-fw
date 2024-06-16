@@ -9,7 +9,6 @@ from scipy import signal
 import commpy.filters as filter
 from threading import Thread
 
-sqnr_log = []
 print(time.ctime())
 ITERATIONS = 100
 base_signal = [0] * ITERATIONS
@@ -52,7 +51,9 @@ def gen_signal():
 
     #AWGN 
     n = (np.random.randn(len(tx_signal)) + 1j*np.random.randn(len(tx_signal)))/np.sqrt(2) # AWGN with unity power
-    tx_signal = tx_signal + n/100
+    ne = float(np.sum(np.abs(n) ** 2)) / len(n)
+    se = float(np.sum(np.abs(tx_signal) ** 2)) / len(tx_signal)
+    tx_signal = tx_signal + n/(1000*ne/se)
 
     #delay pre RX
     delay = 0.1 # fractional delay, in samples
@@ -177,6 +178,7 @@ def simulation_step(sim_exe: str, limiters: list, rx_signal: np.array, reference
         cmplx = complex(float(number[0]), float(number[1]))
         corrected_bsv[index] = cmplx
         index += 1
+    index = min(len(reference_signal), index)
     bsv_file.close()
     log[log_index] = sqnr(reference_signal[0:index-1], corrected_bsv[0:index-1])
 
@@ -191,8 +193,8 @@ def threaded_simulations(limiters: list, sim_exe: str):
         threads[n].join()
 
 for i in range(ITERATIONS):
-    base_signal[i]  =  perform_estimation_n_fix(gen_signal())
-    fixed_signal[i] =  mmted(base_signal[i])
+    base_signal[i]  =  gen_signal()
+    fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
 
 SQNR_THRESHOLD = 10.0
 
@@ -200,8 +202,8 @@ def max1(n_limiters:int, exe: str):
     limiters = [0] * n_limiters
     threaded_simulations(limiters, exe)
     sqnr = np.array(snr_log)
-    print(sqnr.mean(), sqnr.std())
-    best_result = (sqnr.mean() - 3*sqnr.std())
+    print(sqnr.mean(), sqnr.std(), sqnr.min())
+    best_result = (sqnr.min())
     while (best_result > SQNR_THRESHOLD):
         print("round", limiters, best_result)
         round_results = []
@@ -213,17 +215,23 @@ def max1(n_limiters:int, exe: str):
             tmp_limiters[n] = tmp_limiters[n] + 1
             threaded_simulations(tmp_limiters, exe)
             sqnr = np.array(snr_log)
-            round_results.append(sqnr.mean() - 3*sqnr.std())
+            round_results.append(sqnr.min())
+            #print(sqnr.mean(), sqnr.std(), sqnr.min())
         #best result on the round
         for n in range(n_limiters):
             if (round_results[n] >= SQNR_THRESHOLD and round_results[n] > tmp_best_result):
                 tmp_best_result = round_results[n]
                 tmp_result_index = n
+        if tmp_result_index == None:
+            break
         best_result = tmp_best_result
         limiters[tmp_result_index] = limiters[tmp_result_index] + 1
+        if limiters[tmp_result_index] > 16:
+            break
     print("final result: ", best_result, "WL:", limiters)
 
 #max1(8, "../CostasLoop/CostasLoop.exe")        
-max1(5, "../mmTED/mmTED.exe")
+#max1(5, "../mmTED/mmTED.exe")
+max1(14, "../coarseFreq/coarseFreq.exe")
 
 print(time.ctime())

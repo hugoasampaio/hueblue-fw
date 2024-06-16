@@ -77,17 +77,24 @@ def perform_estimation_n_fix(rx_signal: np.array):
     #rx - step 3: delay 'n' multiply coarse freq error estimation
     last_rx = complex(0,0)
     err_ = complex(0,0)
-    sum = 0
-    fserror = 0
-    for rx in rx_signal[42:]:
-        sum += 1
+    #sum = 0
+    #fserror = 0
+    #for rx in rx_signal[30:30*4+30]:
+    #    sum += 1
+    #    conj = (rx * last_rx.conjugate())
+    #    err_ += conj
+        #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
+    #    if sum > 16*sps:
+            #print(((sps/2)/(np.pi*Tsymbol)))
+    #        fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
+    #    last_rx = rx
+    for rx in rx_signal[30:30+4*sps]:
         conj = (rx * last_rx.conjugate())
         err_ += conj
         #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
-        if sum > 16*sps:
-            #print(((sps/2)/(np.pi*Tsymbol)))
-            fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
+        #print(((sps/2)/(np.pi*Tsymbol)))
         last_rx = rx
+    fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real) 
     #apply freq error fix
     freq_fix = fsamples*fserror
     t = np.arange(0, Tsample*len(rx_signal), Tsample) # create time vector
@@ -97,19 +104,18 @@ def perform_estimation_n_fix(rx_signal: np.array):
 
 ###################################################################################
 
-def simulation_step(curr_lim: int, last_lim: int, accum_lim: int, 
-                    error_lim: int, xFix_lim: int, yFix_lim: int,
-                    in_lim: int, out_lim: int,
-                    xcordic:int, ycordic:int, zcordic:int,
-                    rx_signal: np.array, reference_signal: np.array,
+def simulation_step(limiters: list, rx_signal: np.array, reference_signal: np.array,
                     log: list, log_index: int):
 
     #print values to run bittrue simulation on bsv
     in_file_name = "/tmp/dnm-sim-"+str(log_index)+"-py.log"
     out_file_name = "/tmp/dnm-sim-"+str(log_index)+"-bsv.log"
     f = open(in_file_name, "w")
-    print(f'{curr_lim}.0, {last_lim}.0, {accum_lim}.0, {error_lim}.0, {xFix_lim}.0, {yFix_lim}.0, {in_lim}.0, {out_lim}.0, {xcordic}.0, {ycordic}.0, {zcordic}.0',
-          file= f)
+    lim_string = ""
+    for limiter in limiters:
+        lim_string += f',{limiter}.0'
+    lim_string = lim_string[1:]
+    print(lim_string, file= f)
     for datum in rx_signal:
         print("{:.6f}".format(datum.real), 
             ",", 
@@ -167,13 +173,11 @@ def simulation_step(curr_lim: int, last_lim: int, accum_lim: int,
     #plt.show()
     #return snr
 
-def threaded_simulations(curr: int, last:int, accum:int, 
-                         error:int, x:int, y:int,
-                         inL:int, outL:int, xc:int, yc:int, zc:int):
+def threaded_simulations(limiters:list):
     threads = [None] * ITERATIONS
     for n in range(ITERATIONS):
         threads[n] = Thread(target=simulation_step, 
-                args=(curr, last, accum, error, x, y, inL, outL, xc, yc, zc, base_signal[n], fixed_signal[n], snr_log, n))
+                args=(limiters, base_signal[n], fixed_signal[n], snr_log, n))
         threads[n].start()
     for n in range(ITERATIONS):
         threads[n].join()
@@ -190,29 +194,30 @@ def threaded_simulations(curr: int, last:int, accum:int,
 #                               "std:", "{:.3f}".format(log.std()), 
 #                                "WL:", curr, last, accum, 0, cx, x, y)
 
+for i in range(ITERATIONS):
+    base_signal[i]  =  gen_signal(0.25)
+    fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
+
 #threaded_simulations(6, 6, 3, 9, 3, 2)
-#threaded_simulations(0, 0, 0, 0, 0, 0, 0,0,0,0,0)
+limiters = [0] * 14
+threaded_simulations(limiters)
 
-#log = np.array(snr_log)
-#print("mean:", "{:.3f}".format(log.mean()), 
-#              "std:", "{:.3f}".format(log.std()),
-#              "min",  "{:.3f}".format(log.min()))
+log = np.array(snr_log)
+print("mean:", "{:.3f}".format(log.mean()), 
+              "std:", "{:.3f}".format(log.std()),
+              "min",  "{:.3f}".format(log.min()))
 
-#for i in range(ITERATIONS):
-#        base_signal[i]  =  gen_signal()
-#        fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
-
-for err in np.linspace(0.01, 0.49, 30):
-    base_signal[0]  =  gen_signal(err)
-    fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
-    simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
-    print("{:.6f}".format(err), "{:.6f}".format(snr_log[0]))
+#for err in np.linspace(0.01, 0.49, 30):
+#    base_signal[0]  =  gen_signal(err)
+#    fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
+#    limiters = [0] * 14
+#    simulation_step(limiters, base_signal[0], fixed_signal[0], snr_log, 0)
+#    print("{:.6f}".format(err), "{:.6f}".format(snr_log[0]))
 
 #base_signal[0]  =  gen_signal(0.085)
 #fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
 #simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
 #print("{:.6f}".format(0.085), "{:.6f}".format(snr_log[0]))
-
 
 print(time.ctime())
 #simulated annealing

@@ -29,6 +29,10 @@ module mkTb (Empty);
 	Reg#(REAL_SAMPLE_TYPE) yV <-mkReg(0);
 	Reg#(REAL_SAMPLE_TYPE) zV <-mkReg(0);
 
+	Reg#(REAL_SAMPLE_TYPE) xaV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) yaV <-mkReg(0);
+	Reg#(REAL_SAMPLE_TYPE) zaV <-mkReg(0);
+
 
     Reg#(UInt#(10)) n <- mkReg(0);
  
@@ -58,7 +62,12 @@ module mkTb (Empty);
 		lr.start;
 		zV <= lr.result;
 
-		
+		lr.start;
+		xaV <= lr.result;
+		lr.start;
+		yaV <= lr.result;
+		lr.start;
+		zaV <= lr.result;
 
 		coarseFreq.cbus_ifc.write(11, fromInteger(cleanMask) << currV.i);
 		coarseFreq.cbus_ifc.write(12, fromInteger(cleanMask) << lastV.i);
@@ -73,6 +82,10 @@ module mkTb (Empty);
 		coarseFreq.cbus_ifc.write(41, fromInteger(cleanMask) << xV.i);
 		coarseFreq.cbus_ifc.write(42, fromInteger(cleanMask) << yV.i);
 		coarseFreq.cbus_ifc.write(43, fromInteger(cleanMask) << zV.i);
+
+		coarseFreq.cbus_ifc.write(44, fromInteger(cleanMask) << xaV.i);
+		coarseFreq.cbus_ifc.write(45, fromInteger(cleanMask) << yaV.i);
+		coarseFreq.cbus_ifc.write(46, fromInteger(cleanMask) << zaV.i);
 		
 		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 			lr.start;
@@ -92,12 +105,10 @@ module mkTb (Empty);
 		for (n <= 0; n < fromInteger(loopFix); n <= n+1) seq
 			action
 			let fix <- coarseFreq.device_ifc.getFixedSamples();
-
 			fxptWrite(5, fix.rel);
 			$write(", ");
 			fxptWrite(5, fix.img);
 			$display(" ");
-			
 			endaction
 		endseq
 		
