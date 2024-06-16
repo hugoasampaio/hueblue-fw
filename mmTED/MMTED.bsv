@@ -63,7 +63,7 @@ module mkMMTED (MMTED_IFC);
             endaction
             mmVal <= y.rel-x.rel;
             mu <= mu + fromInteger(sps) + (0.3 * mmVal);
-            iIn <= iIn + unpack(mu.i);
+            iIn <= iIn + signExtend(unpack(mu.i));
             action
             mu.i <= 0;
             iOut <= iOut + 1;

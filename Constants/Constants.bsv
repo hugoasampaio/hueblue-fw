@@ -8,7 +8,7 @@ typedef 12    CBDATASIZE; //size of configuration data bus
 
 Integer cleanMask = 'hfff;
 
-typedef 12  INTEGERSIZE; //-2048 a 2047, atan tem ²
+typedef 4  INTEGERSIZE; //-8 a 7
  
 typedef FixedPoint#(INTEGERSIZE, CBDATASIZE)    REAL_SAMPLE_TYPE;
 typedef Complex#(REAL_SAMPLE_TYPE)              COMPLEX_SAMPLE_TYPE;
