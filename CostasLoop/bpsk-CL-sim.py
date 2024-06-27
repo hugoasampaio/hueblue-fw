@@ -175,15 +175,13 @@ def simulation_step(ph_limiter: int, err_limiter: int, fr_limiter: int,
 
     #read values from bittrue simulation
     index = 0
-    corrected_bsv = np.zeros(samples_from_bsv+5, dtype=complex)
+    corrected_bsv = np.zeros(500, dtype=complex)
     bsv_file = open(out_file_name, "r")
     for line in bsv_file:
         number = line.split(",")
         cmplx = complex(float(number[0]), float(number[1]))
         corrected_bsv[index] = cmplx
         index += 1
-        if index > samples_from_bsv:
-            break
     bsv_file.close()
     #compare to python values
 
@@ -194,15 +192,19 @@ def simulation_step(ph_limiter: int, err_limiter: int, fr_limiter: int,
     #      "freq:", fr_limiter, " sqnr: ", 
     #      sqnr(reference_signal[0:samples_from_bsv-1], 
     #           corrected_bsv[0:samples_from_bsv-1]))
-    log[log_index] = sqnr(reference_signal[0:index-1], corrected_bsv[0:index-1])
+    reference_signal= np.resize(reference_signal, index)
+    corrected_bsv = np.resize(corrected_bsv,index)
+    log[log_index] = sqnr(reference_signal, corrected_bsv)
     
-    #plt.figure(3)
-    #plt.plot(reference_signal.real, '.-')
-    #plt.plot(reference_signal.imag,'.-')
+    plt.title("Costas Loop - Python to optimal comparison")
+    plt.subplot(2, 1, 1)
+    plt.plot(reference_signal.real, '.-')
+    plt.plot(reference_signal.imag,'.-')
     #plt.figure(4)
-    #plt.plot(corrected_bsv.real,'.-') 
-    #plt.plot(corrected_bsv.imag, '.-')
-    #plt.show()
+    plt.subplot(2, 1, 2)
+    plt.plot(corrected_bsv.real,'.-') 
+    plt.plot(corrected_bsv.imag, '.-')
+    plt.show()
 
 def threaded_simulations(x: int, y:int, mu:int,
                          inSample:int, outSample:int, 
@@ -235,11 +237,12 @@ def full_simulation():
                                             "min:", "{:.3f}".format(log.min()),
                                             "WL:", ph, err, freq, inSample, outSample, xcordic, ycordic, zcordic)
 
-#simulation_step(0, 0, 0,0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
+#limiters = [11, 12, 6, 11, 11, 9, 9, 11]
+simulation_step(11, 12, 6, 11, 11, 9, 9, 11, base_signal[0], fixed_signal[0], snr_log, 0)
 #print("sqnr:", "{:.3f}".format(snr_log[0]))
 #simulation_step(6, 6, 4, 6, 6, base_signal[0], fixed_signal[0], snr_log, 0)
 #print("sqnr:", "{:.3f}".format(snr_log[0]))
 
-full_simulation()
+#full_simulation()
 
 print(time.ctime())
