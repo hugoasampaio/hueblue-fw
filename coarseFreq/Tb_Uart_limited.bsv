@@ -166,10 +166,10 @@ module mkTb#(Clock clk_uart) (UartIface);
 			fixValue <= fix;
 			endaction
 			fix_bytes <= 0;
-            fix_bytes[59:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:32] <= pack(fixValue.rel.f);
-            fix_bytes[27:16] <= pack(fixValue.img.i);
-            fix_bytes[15:00] <= pack(fixValue.img.f);
+            fix_bytes[51:48] <= pack(fixValue.rel.i);
+            fix_bytes[47:36] <= pack(fixValue.rel.f);
+            fix_bytes[19:16] <= pack(fixValue.img.i);
+            fix_bytes[15:04] <= pack(fixValue.img.f);
 
             
             fifo_uart_tx.enq(fix_bytes[63:56]);
@@ -190,77 +190,4 @@ module mkTb#(Clock clk_uart) (UartIface);
     interface rs232_rst = rst_uart;
     
 endmodule: mkTb
-
-/*----------------------------------------------------------------------------------------*/
-
-interface LineReader;
-	method Action start;
-	method REAL_SAMPLE_TYPE result;
-endinterface
-
-REAL_SAMPLE_TYPE fracDigits[8] = {
-		0.1,
-		0.01,
-		0.001,
-		0.0001,
-		0.00001,
-		0.000001,
-		0.0000001,
-		0.00000001
-};
-
-module mkLineReader(LineReader);
-	function ord(s) = fromInteger(charToInteger(stringHead(s)));
-
-	Reg#(Int#(7)) c <- mkRegU;
-	Reg#(REAL_SAMPLE_TYPE) number <-mkReg(0.0);
-	Reg#(UInt#(3)) fracDigit <- mkReg(0);
-
-	Reg#(Bool) dot <- mkReg(False);
-	Reg#(Bool) neg <- mkReg(False);
-
-	FSM fsm <- mkFSM(seq
-		dot <= False;
-		neg <= False;
-		fracDigit <= 0;
-		number <= 0.0;
-		while (True) seq
-			action
-			let cin <- $fgetc(stdin);
-			if (cin == -1) begin
-				$display("Unexpected EOF");
-				$finish(1);
-			end
-			c <= truncate(cin);
-			endaction
-
-			
-			if (c == ord(",") || c == ord("\n") || c == 13) seq
-				if (neg == True) number <= number * -1.0;
-				break;
-			endseq
-
-			if (c > ord("9")) break;
-
-			action
-				case (c)
-					ord("."): dot <= True;
-					ord("-"): neg <= True;
-					ord("0"),ord("1"),ord("2"),ord("3"),ord("4"),ord("5"),ord("6"),ord("7"),ord("8"),ord("9"): begin
-						if(dot == False) number <= number * 10 + fromInt(c - 48);
-						else action
-							number <= number + fxptTruncate(fracDigits[fracDigit] * fromInt(c - 48));
-							fracDigit <= fracDigit + 1;
-						endaction					
-						end
-					default: noAction;
-				endcase
-			endaction
-		endseq
-	endseq);
-
-	method start = fsm.start;
-	method result if (fsm.done) = number;
-
-endmodule: mkLineReader
 endpackage: Tb_Uart_limited

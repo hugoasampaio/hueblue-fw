@@ -1,6 +1,6 @@
-package Tb_Uart_all16;
+package Tb_Uart_optimal;
 
-import CoarseFreq_all16::*;
+import CoarseFreq_optimal::*;
 import StmtFSM::*;
 import Complex::*;
 import FixedPoint::*;
@@ -31,9 +31,9 @@ module mkTb#(Clock clk_uart) (UartIface);
     mkConnection(toGet(fifo_uart_tx), uart.rx);
     mkConnection(toPut(fifo_uart_rx), uart.tx);
    
-    Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
-    Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
-	Reg#(COMPLEX_SAMPLE_TYPE) fixValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 4)) realValue <-mkReg(0);
+    Reg#(FixedPoint#(4, 4)) imagValue <-mkReg(0);
+	Reg#(Complex#(FixedPoint#(4, 4))) fixValue <-mkReg(0);
 
 	Reg#(Bit#(32)) real_bytes <-mkReg(0);
     Reg#(Bit#(32)) imag_bytes <-mkReg(0);
@@ -61,8 +61,8 @@ module mkTb#(Clock clk_uart) (UartIface);
             real_bytes[7:0] <= fifo_uart_rx.first;
             fifo_uart_rx.deq;
             endaction
-            realValue.i <= unpack(real_bytes[valueOf(INTEGERSIZE)+15:16]);
-            realValue.f <= unpack(real_bytes[15:16-valueOf(CBDATASIZE)]);
+            realValue.i <= unpack(real_bytes[19:16]);
+            realValue.f <= unpack(real_bytes[15:12]);
 
             action
             imag_bytes[31:24] <= fifo_uart_rx.first;
@@ -80,8 +80,8 @@ module mkTb#(Clock clk_uart) (UartIface);
             imag_bytes[7:0] <= fifo_uart_rx.first;
             fifo_uart_rx.deq;
             endaction
-            imagValue.i <= unpack(imag_bytes[valueOf(INTEGERSIZE)+15:16]);
-            imagValue.f <= unpack(imag_bytes[15:16-valueOf(CBDATASIZE)]);
+            imagValue.i <= unpack(imag_bytes[19:16]);
+            imagValue.f <= unpack(imag_bytes[15:12]);
 			coarseFreq.addSample(cmplx(realValue, imagValue));
 		endseq
 
@@ -91,10 +91,10 @@ module mkTb#(Clock clk_uart) (UartIface);
 			fixValue <= fix;
 			endaction
 			fix_bytes <= 0;
-            fix_bytes[59:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:32] <= pack(fixValue.rel.f);
-            fix_bytes[27:16] <= pack(fixValue.img.i);
-            fix_bytes[15:00] <= pack(fixValue.img.f);
+            fix_bytes[51:48] <= pack(fixValue.rel.i);
+            fix_bytes[47:44] <= pack(fixValue.rel.f);
+            fix_bytes[19:16] <= pack(fixValue.img.i);
+            fix_bytes[15:12] <= pack(fixValue.img.f);
 
             
             fifo_uart_tx.enq(fix_bytes[63:56]);
@@ -115,6 +115,4 @@ module mkTb#(Clock clk_uart) (UartIface);
     interface rs232_rst = rst_uart;
     
 endmodule: mkTb
-
-/*----------------------------------------------------------------------------------------*/
-endpackage: Tb_Uart_all16
+endpackage: Tb_Uart_optimal

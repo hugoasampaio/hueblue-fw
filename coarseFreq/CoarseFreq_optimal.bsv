@@ -1,4 +1,4 @@
-package CoarseFreq_all16;
+package CoarseFreq_optimal;
 
 import Complex::*;
 import Vector::*;
@@ -6,34 +6,38 @@ import FIFO::*;
 import FIFOF::*;
 import StmtFSM::*;
 import FixedPoint::*;
-import Cordic::*;
+import Cordic_cf::*;
 import Constants::*;
 
 Integer sps = 4;
 Integer tSamples = 1;
 Integer tSymbol = tSamples * sps;
 Integer loopFix = 442;
-
+/*
+coarse freq 13, 13, 13, 8, 12, 12, 12, 12, 
+rotate 9, 9, 6, 
+atan  16, 13, 5
+*/
 interface CoarseFreq_IFC;
-    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
-    method ActionValue #(REAL_SAMPLE_TYPE) getError;
-    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSamples;
+    method Action addSample (Complex#(FixedPoint#(4, 4)) sample);
+    method ActionValue #(FixedPoint#(4, 8)) getError;
+    method ActionValue #(Complex#(FixedPoint#(4, 4))) getFixedSamples;
     method Bool hasFixedSamples;
 endinterface: CoarseFreq_IFC
 
 module mkCoarseFreq (CoarseFreq_IFC);
-    Vector#(446, Reg#(COMPLEX_SAMPLE_TYPE)) samples <-replicateM(mkReg(0));
-    Reg#(COMPLEX_SAMPLE_TYPE) out <- mkReg(0);
+    Vector#(446, Reg#(Complex#(FixedPoint#(4, 4)))) samples <-replicateM(mkReg(0));
+    Reg#(Complex#(FixedPoint#(4, 4))) out <- mkReg(0);
 
-    FIFO#(COMPLEX_SAMPLE_TYPE) newSample <- mkFIFO;
-    FIFOF#(COMPLEX_SAMPLE_TYPE) outSample <- mkSizedFIFOF(445);
-    Reg#(COMPLEX_SAMPLE_TYPE) lastSample <-mkReg(0);
-    Reg#(COMPLEX_SAMPLE_TYPE) currSample <-mkReg(0);
-    Reg#(COMPLEX_SAMPLE_TYPE) accumError <- mkReg(0);
-    Reg#(REAL_SAMPLE_TYPE) fsError <- mkReg(0);
+    FIFO#(Complex#(FixedPoint#(4, 4))) newSample <- mkFIFO;
+    FIFOF#(Complex#(FixedPoint#(4, 4))) outSample <- mkSizedFIFOF(445);
+    Reg#(Complex#(FixedPoint#(4, 3))) lastSample <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 3))) currSample <-mkReg(0);
+    Reg#(Complex#(FixedPoint#(4, 3))) accumError <- mkReg(0);
+    Reg#(FixedPoint#(4, 8)) fsError <- mkReg(0);
     
-    Reg#(REAL_SAMPLE_TYPE) xFix <- mkReg(1.0);
-    Reg#(REAL_SAMPLE_TYPE) yFix <- mkReg(0.0);
+    Reg#(FixedPoint#(4, 4)) xFix <- mkReg(1.0);
+    Reg#(FixedPoint#(4, 4)) yFix <- mkReg(0.0);
 
     Reg#(UInt#(10)) n <- mkReg(0);
     Reg#(UInt#(10)) m <- mkReg(0);
@@ -61,7 +65,7 @@ module mkCoarseFreq (CoarseFreq_IFC);
         endseq
         for (n <= 30; n < (30+8*fromInteger(sps)); n <= n+1) seq
                 action
-                currSample <= samples[n];                
+                currSample <= cmplx(fxptTruncate(samples[n].rel), fxptTruncate(samples[n].img));                
                 lastSample.img <=  lastSample.img * -1.0; //conjugado
                 endaction
                 action
@@ -73,18 +77,18 @@ module mkCoarseFreq (CoarseFreq_IFC);
         atan.setPolar(accumError.rel, accumError.img, 0.0);
         action
         let z <- atan.getZ;
-        fsError <=  0.159155 * z;
+        fsError <=  0.159155 * fxptSignExtend(z);
         endaction
         
         for(n <= 0; n < fromInteger(loopFix); n <= n+1) seq
             out <= samples[n] * cmplx(xFix, yFix); 
             outSample.enq(out);
-            cordic.setPolar(xFix, yFix, (-2.0 * 3.141593 * fsError));
+            cordic.setPolar(fxptTruncate(xFix), fxptTruncate(yFix), (-2.0 * 3.141593 * fxptTruncate(fsError)));
             action
             let x_rot <- cordic.getX();
             let y_rot <- cordic.getY();
-            xFix <= x_rot;
-            yFix <= y_rot;
+            xFix <= fxptSignExtend(x_rot);
+            yFix <= fxptSignExtend(y_rot);
             endaction
         endseq
     endseq;
@@ -94,16 +98,16 @@ module mkCoarseFreq (CoarseFreq_IFC);
         coarseErrorCalc.start;
     endrule
 
-    method Action addSample (COMPLEX_SAMPLE_TYPE sample);
+    method Action addSample (Complex#(FixedPoint#(4, 4)) sample);
         newSample.enq(sample);
     endmethod
 
-    method ActionValue #(REAL_SAMPLE_TYPE) getError;
+    method ActionValue #(FixedPoint#(4, 8)) getError;
         coarseErrorCalc.waitTillDone();
         return fsError;
     endmethod
 
-    method ActionValue #(COMPLEX_SAMPLE_TYPE) getFixedSamples;
+    method ActionValue #(Complex#(FixedPoint#(4, 4))) getFixedSamples;
         let x = outSample.first;
         outSample.deq;
         return x;
@@ -113,4 +117,4 @@ module mkCoarseFreq (CoarseFreq_IFC);
 
 endmodule: mkCoarseFreq
 
-endpackage: CoarseFreq_all16
+endpackage: CoarseFreq_optimal

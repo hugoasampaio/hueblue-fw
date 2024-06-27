@@ -164,13 +164,15 @@ def simulation_step(limiters: list, rx_signal: np.array, reference_signal: np.ar
     #      "a:",accum_lim,"e:",error_lim, 
     #      "cf:",cplxFix_lim,"x:",xFix_lim,"y:",yFix_lim,
     #      " sqnr:", snr)
-    #plt.figure(1)
-    #plt.plot(reference_signal.real, '.-')
-    #plt.plot(reference_signal.imag,'.-')
+    plt.figure("D&M - Python to optimal comparison")
+    plt.subplot(2, 1, 1)
+    plt.plot(reference_signal.real, '.-')
+    plt.plot(reference_signal.imag,'.-')
     #plt.figure(2)
-    #plt.plot(coarse_freq_corrected_bsv.real,'.-') 
-    #plt.plot(coarse_freq_corrected_bsv.imag, '.-')
-    #plt.show()
+    plt.subplot(2, 1, 2)
+    plt.plot(coarse_freq_corrected_bsv.real,'.-') 
+    plt.plot(coarse_freq_corrected_bsv.imag, '.-')
+    plt.show()
     #return snr
 
 def threaded_simulations(limiters:list):
@@ -198,14 +200,16 @@ for i in range(ITERATIONS):
     base_signal[i]  =  gen_signal(0.25)
     fixed_signal[i] =  perform_estimation_n_fix(base_signal[i])
 
-#threaded_simulations(6, 6, 3, 9, 3, 2)
-limiters = [0] * 14
-threaded_simulations(limiters)
+limiters = [13, 13, 13, 8, 12, 12, 12, 12, 9, 9, 6, 16, 13, 5]
+#limiters = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+#threaded_simulations(13,13,13,8,12,12,12,12,9,9,6,16,13,5)
+#limiters = [0] * 14
+#threaded_simulations(limiters)
 
-log = np.array(snr_log)
-print("mean:", "{:.3f}".format(log.mean()), 
-              "std:", "{:.3f}".format(log.std()),
-              "min",  "{:.3f}".format(log.min()))
+#log = np.array(snr_log)
+#print("mean:", "{:.3f}".format(log.mean()), 
+#              "std:", "{:.3f}".format(log.std()),
+#              "min",  "{:.3f}".format(log.min()))
 
 #for err in np.linspace(0.01, 0.49, 30):
 #    base_signal[0]  =  gen_signal(err)
@@ -216,8 +220,10 @@ print("mean:", "{:.3f}".format(log.mean()),
 
 #base_signal[0]  =  gen_signal(0.085)
 #fixed_signal[0] =  perform_estimation_n_fix(base_signal[0])
-#simulation_step(0, 0, 0, 0, 0, 0, 0,0,0,0,0, base_signal[0], fixed_signal[0], snr_log, 0)
-#print("{:.6f}".format(0.085), "{:.6f}".format(snr_log[0]))
+#for i in range(10):
+#    limiters = [i] * 14
+simulation_step(limiters, base_signal[0], fixed_signal[0], snr_log, 0)
+#    print("{:.6f}".format(snr_log[0]))
 
 print(time.ctime())
 #simulated annealing

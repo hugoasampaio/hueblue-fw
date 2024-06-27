@@ -91,10 +91,10 @@ module mkTb#(Clock clk_uart) (UartIface);
 			fixValue <= fix;
 			endaction
 			fix_bytes <= 0;
-            fix_bytes[59:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:32] <= pack(fixValue.rel.f);
-            fix_bytes[27:16] <= pack(fixValue.img.i);
-            fix_bytes[15:00] <= pack(fixValue.img.f);
+            fix_bytes[51:48] <= pack(fixValue.rel.i);
+            fix_bytes[47:36] <= pack(fixValue.rel.f);
+            fix_bytes[19:16] <= pack(fixValue.img.i);
+            fix_bytes[15:04] <= pack(fixValue.img.f);
 
             
             fifo_uart_tx.enq(fix_bytes[63:56]);
