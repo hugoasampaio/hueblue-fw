@@ -217,28 +217,4 @@ module mkAtan (Cordic_IFC);
     endmethod
 
 endmodule: mkAtan
-
-endpackage : Cordic
-
-/*    
-    if (y_ > 0) begin
-    x_ <= x_ + (y_ >> n);
-    y_ <= y_ - (x_ >> n);
-    sumAngle <= sumAngle + angles[n];
-    end
-    else begin
-    x_ <= x_ - (y_ >> n);
-    y_ <= y_ + (x_ >> n);
-    sumAngle <= sumAngle - angles[n];
-    end
-
-if (z > 1.570796) begin
-            bigAngle<= True;
-            z_ <= z - 2*(z - 1.570796);
-        end else if (z < (-1.570796)) begin
-            bigAngle<= True;
-            z_ <= z + 2*(z + 1.570796);
-        end else
-
-
-*/
+endpackage: Cordic
