@@ -1,0 +1,3 @@
+[submodule "hueblue-spinalhdl"]
+	path = hueblue-spinalhdl
+	url = https://github.com/hugoasampaio/hueblue-spinalhdl
