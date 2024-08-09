@@ -15,96 +15,162 @@ import Clocks::*;
 import Connectable::*;
 
 interface UartIface;
-    interface RS232 rs232;
-    interface Reset rs232_rst;    
+    interface RS232 rs232;    
 endinterface
 
 (* synthesize *)
-module mkTb#(Clock clk_uart) (UartIface);
+module mkTb (UartIface);
     IWithCBus#(LimitedCostasLoop, CostasLoop_IFC) cc <- exposeCBusIFC(mkCostasLoop);
-
-    Reset rst_uart <- mkAsyncResetFromCR(2, clk_uart);
-    UART#(16) uart <- mkUART(8, NONE, STOP_1, 1, clocked_by clk_uart, reset_by rst_uart);
+    UART#(16) uart <- mkUART(8, NONE, STOP_1, 315);
     
-    SyncFIFOIfc#(Bit#(8)) fifo_uart_rx <- mkSyncFIFOToCC(2, clk_uart, rst_uart);
-    SyncFIFOIfc#(Bit#(8)) fifo_uart_tx <- mkSyncFIFOFromCC(2, clk_uart);
+    FIFO#(Bit#(8)) fifo_uart_rx <- mkSizedFIFO(100);
+    FIFO#(Bit#(8)) fifo_uart_tx <- mkSizedFIFO(100);
     //inverted so tx means out, rx means in
     mkConnection(toGet(fifo_uart_tx), uart.rx);
-    mkConnection(toPut(fifo_uart_rx), uart.tx);
+    mkConnection(uart.tx, toPut(fifo_uart_rx));
 
     Reg#(Bit#(8)) phV <-mkReg(0);
 	Reg#(Bit#(8)) errV <-mkReg(0);
 	Reg#(Bit#(8)) frV <-mkReg(0);
+    Reg#(Bit#(8)) inV <-mkReg(0);
+    Reg#(Bit#(8)) outV <-mkReg(0);
+
+    Reg#(Bit#(8)) xV <-mkReg(0);
+    Reg#(Bit#(8)) yV <-mkReg(0);
+    Reg#(Bit#(8)) zV <-mkReg(0);
+
     Reg#(REAL_SAMPLE_TYPE) realValue <-mkReg(0);
     Reg#(REAL_SAMPLE_TYPE) imagValue <-mkReg(0);
     Reg#(COMPLEX_SAMPLE_TYPE) fixValue <-mkReg(0);
 
-    Reg#(Bit#(32)) real_bytes <-mkReg(0);
-    Reg#(Bit#(32)) imag_bytes <-mkReg(0);
-    Reg#(Bit#(64)) fix_bytes <-mkReg(0);
+    Reg#(Bit#(24)) real_bytes <-mkReg(0);
+    Reg#(Bit#(24)) imag_bytes <-mkReg(0);
+    Reg#(Bit#(48)) fix_bytes <-mkReg(0);
     
     Reg#(UInt#(10)) n <- mkReg(0);
 
     Stmt test = seq
+      while(True) seq
+        fifo_uart_tx.enq(80);
+        fifo_uart_tx.enq(79);
+        fifo_uart_tx.enq(78);
+        fifo_uart_tx.enq(71);
+        fifo_uart_tx.enq(13);
 
         action
-        phV <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
+        //let b <- uart.tx.get();
+        //phV <= b;
+        phV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();   
         endaction
 
         action
-        errV <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
+        //let b <- uart.tx.get();
+        //errV <= b;
+        errV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
         endaction
 
         action
-        frV <= fifo_uart_rx.first;
-        fifo_uart_rx.deq;
+        //let b <- uart.tx.get();
+        //frV <= b;
+        frV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
+        endaction
+
+        action
+        //let b <- uart.tx.get();
+        //inV <= b;
+        inV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
+        endaction
+
+        action
+        //let b <- uart.tx.get();
+        //outV <= b;
+        outV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
+        endaction
+
+        action
+        //let b <- uart.tx.get();
+        //xV <= b;
+        xV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
+        endaction
+        action
+        //let b <- uart.tx.get();
+        //yV <= b;
+        yV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
+        endaction
+        action
+        //let b <- uart.tx.get();
+        //zV <= b;
+        zV <= fifo_uart_rx.first();
+        fifo_uart_rx.deq();
         endaction
         
 		cc.cbus_ifc.write(31, fromInteger(cleanMask) << phV);
 		cc.cbus_ifc.write(32, fromInteger(cleanMask) << errV);
 		cc.cbus_ifc.write(33, fromInteger(cleanMask) << frV);
+        cc.cbus_ifc.write(34, fromInteger(cleanMask) << inV);
+        cc.cbus_ifc.write(35, fromInteger(cleanMask) << outV);
+
+        cc.cbus_ifc.write(41, fromInteger(cleanMask) << xV);
+		cc.cbus_ifc.write(42, fromInteger(cleanMask) << yV);
+		cc.cbus_ifc.write(43, fromInteger(cleanMask) << zV);
 
         for (n<=0; n < 83; n <= n+1) seq
+            /*read 3 bytes for real
+            1st byte is integer
+            2nd and 3rd is fractional
+            */
+            action
+            //let b <- uart.tx.get();
+            //real_bytes[23:16] <= b;
+            real_bytes[23:16] <= fifo_uart_rx.first(); 
+            fifo_uart_rx.deq();
+            endaction
+            action
+            //let b <- uart.tx.get();
+            //real_bytes[15:8] <= b;
+            real_bytes[15:8] <= fifo_uart_rx.first();
+            fifo_uart_rx.deq();            
+            endaction
+            action
+            //let b <- uart.tx.get();
+            //real_bytes[7:0] <= b;
+            real_bytes[7:0] <= fifo_uart_rx.first();
+            fifo_uart_rx.deq();
+            endaction
+            realValue.i <= unpack(real_bytes[23:16]);
+            realValue.f <= unpack(real_bytes[15:0]);
 
+            /*read 3 bytes for imaginary
+            1st byte is integer
+            2nd and 3rd is fractional
+            */
             action
-            real_bytes[31:24] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
+            //let b <- uart.tx.get();
+            //imag_bytes[23:16] <= b;
+            imag_bytes[23:16] <= fifo_uart_rx.first();
+            fifo_uart_rx.deq();
             endaction
             action
-            real_bytes[23:16] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
+            //let b <- uart.tx.get();
+            //imag_bytes[15:8] <= b;
+            imag_bytes[15:8] <= fifo_uart_rx.first();
+            fifo_uart_rx.deq();
             endaction
             action
-            real_bytes[15:8] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
+            //let b <- uart.tx.get();
+            //imag_bytes[7:0] <= b;
+            imag_bytes[7:0] <= fifo_uart_rx.first();
+            fifo_uart_rx.deq();
             endaction
-            action
-            real_bytes[7:0] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
-            endaction
-            realValue.i <= unpack(real_bytes[valueOf(INTEGERSIZE)+15:16]);
-            realValue.f <= unpack(real_bytes[15:16-valueOf(CBDATASIZE)]);
-
-            action
-            imag_bytes[31:24] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
-            endaction
-            action
-            imag_bytes[23:16] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
-            endaction
-            action
-            imag_bytes[15:8] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
-            endaction
-            action
-            imag_bytes[7:0] <= fifo_uart_rx.first;
-            fifo_uart_rx.deq;
-            endaction
-            imagValue.i <= unpack(imag_bytes[valueOf(INTEGERSIZE)+15:16]);
-            imagValue.f <= unpack(imag_bytes[15:16-valueOf(CBDATASIZE)]);
+            imagValue.i <= unpack(imag_bytes[23:16]);
+            imagValue.f <= unpack(imag_bytes[15:0]);
     
             cc.device_ifc.addSample(cmplx(realValue , imagValue));
             action
@@ -112,113 +178,27 @@ module mkTb#(Clock clk_uart) (UartIface);
             fixValue <= fix;
             endaction
             fix_bytes <= 0;
-            fix_bytes[59:48] <= pack(fixValue.rel.i);
-            fix_bytes[47:36] <= pack(fixValue.rel.f);
-            fix_bytes[27:16] <= pack(fixValue.img.i);
-            fix_bytes[15:04] <= pack(fixValue.img.f);
+            fix_bytes[47:40] <= pack(fixValue.rel.i);
+            fix_bytes[39:24] <= pack(fixValue.rel.f);
 
-            
-            fifo_uart_tx.enq(fix_bytes[63:56]);
-            fifo_uart_tx.enq(fix_bytes[55:48]);
+            fix_bytes[23:16] <= pack(fixValue.img.i);
+            fix_bytes[15:00] <= pack(fixValue.img.f);
+
+            //real
             fifo_uart_tx.enq(fix_bytes[47:40]);
             fifo_uart_tx.enq(fix_bytes[39:32]);
-
             fifo_uart_tx.enq(fix_bytes[31:24]);
+            //imag
             fifo_uart_tx.enq(fix_bytes[23:16]);
             fifo_uart_tx.enq(fix_bytes[15:08]);
             fifo_uart_tx.enq(fix_bytes[07:00]);
 
         endseq
+      endseq
     endseq;
     mkAutoFSM(test);
 
     interface rs232 = uart.rs232;
-    interface rs232_rst = rst_uart;
     
 endmodule: mkTb
-
-/*----------------------------------------------------------------------------------------*/
-/*
-interface LineReader;
-	interface Get#(REAL_SAMPLE_TYPE) result;
-    method Action addChar (Bit#(8) char);
-    method ActionValue #(Bool) isFinished;
-endinterface
-
-REAL_SAMPLE_TYPE fracDigits[8] = {
-		0.1,
-		0.01,
-		0.001,
-		0.0001,
-		0.00001,
-		0.000001,
-		0.0000001,
-		0.00000001
-};
-
-module mkLineReader(LineReader);
-	function ord(s) = fromInteger(charToInteger(stringHead(s)));
-
-	Reg#(Int#(7)) c <- mkRegU;
-	Reg#(REAL_SAMPLE_TYPE) number <-mkReg(0.0);
-	Reg#(UInt#(3)) fracDigit <- mkReg(0);
-    FIFO#(Bit#(8)) ch <- mkFIFO;
-    FIFOF#(REAL_SAMPLE_TYPE) out <- mkFIFOF;
-
-
-	Reg#(Bool) dot <- mkReg(False);
-	Reg#(Bool) neg <- mkReg(False);
-
-	FSM fsm <- mkFSM(seq
-		dot <= False;
-		neg <= False;
-		fracDigit <= 0;
-		number <= 0.0;
-		while (True) seq
-			action
-			c <= ch.first[6:0];
-            ch.deq;
-			endaction
-
-			if (c == ord(",") || c == ord("\n") || c == 13) seq
-				if (neg == True) number <= number * -1.0;
-                out.enq(number);
-				break;
-			endseq
-
-			if (c > ord("9")) break;
-
-			action
-				case (c)
-					ord("."): dot <= True;
-					ord("-"): neg <= True;
-					ord("0"),ord("1"),ord("2"),ord("3"),ord("4"),ord("5"),ord("6"),ord("7"),ord("8"),ord("9"): begin
-						if(dot == False) number <= number * 10 + fromInt(c - 48);
-						else action
-							number <= number + fxptTruncate(fracDigits[fracDigit] * fromInt(c - 48));
-							fracDigit <= fracDigit + 1;
-						endaction					
-						end
-					default: noAction;
-				endcase
-			endaction
-		endseq
-	endseq);
-
-    rule init;
-        fsm.start;
-    endrule 
-
-    method ActionValue #(Bool) isFinished; 
-        return fsm.done;
-    endmethod
-
-	interface result = toGet(out);
-    method Action addChar (Bit#(8) char);
-        ch.enq(char);
-    endmethod
-
-endmodule: mkLineReader
-*/
 endpackage: Tb_Uart_limited
-

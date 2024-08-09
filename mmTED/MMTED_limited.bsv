@@ -94,7 +94,7 @@ module [LimitedOps] mkMMTED (MMTED_IFC);
             mmVal <= y-x;
             mmVal.rel.f <= mmVal.rel.f & limitmm;
             mu <= mu + fromInteger(sps) + (0.3 * mmVal.rel);
-            iIn <= iIn + signExtend(unpack(mu.i));
+            iIn <= iIn + ((unpack(mu.i));
             mu.i <= 0;
             mu.f <= mu.f & limitMu;
             iOut <= iOut + 1;

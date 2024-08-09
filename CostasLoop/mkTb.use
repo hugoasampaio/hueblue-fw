@@ -1,5 +1,3 @@
 FIFO2
-SyncFIFO
-SyncResetA
-Counter
 SizedFIFO
+Counter

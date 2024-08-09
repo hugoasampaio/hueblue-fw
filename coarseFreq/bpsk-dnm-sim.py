@@ -125,21 +125,6 @@ def simulation_step(limiters: list, rx_signal: np.array, reference_signal: np.ar
 
     os.system("./coarseFreq.exe < " + in_file_name + " > " + out_file_name)
 
-    #for datum in vector_fix:
-    #    print("{:.6f}".format(datum.real), 
-    #          ",", 
-    #          "{:.6f}".format(datum.imag))
-
-    #print values to run bittrue simulation on bsv
-    #stdout_fd = sys.stdout
-    #sys.stdout = open("/home/hugo/hueblue-fw/simulations/log/coarseFixed-py.log", "w")
-    #for datum in coarse_freq_corrected_python:
-    #    print("{:.6f}".format(datum.real), 
-    #          ",", 
-    #          "{:.6f}".format(datum.imag))
-    #sys.stdout.close()
-    #sys.stdout = stdout_fd
-
     #read values from bittrue simulation
     index = 0
     coarse_freq_corrected_bsv = np.zeros(samples_from_bsv, dtype=complex)
@@ -152,20 +137,15 @@ def simulation_step(limiters: list, rx_signal: np.array, reference_signal: np.ar
     bsv_file.close()
     #compare to python values
 
-    #for i in range(30, 40):
-    #    print("py: ", coarse_freq_corrected_python[i], " bsv: ", coarse_freq_corrected_bsv[i])
+   
     snr = sqnr(reference_signal[0:index], 
                coarse_freq_corrected_bsv[0:index])
     log[log_index] = snr
 
-    #if (snr < 7.0):
-    #    print("n:", n, "sqnr:", snr)
-    #    print("c:",curr_lim,"l:",last_lim, 
-    #      "a:",accum_lim,"e:",error_lim, 
-    #      "cf:",cplxFix_lim,"x:",xFix_lim,"y:",yFix_lim,
-    #      " sqnr:", snr)
+
     plt.figure("D&M - Python to optimal comparison")
     plt.subplot(2, 1, 1)
+    plt.title("D&M - Python to optimal comparison")
     plt.plot(reference_signal.real, '.-')
     plt.plot(reference_signal.imag,'.-')
     #plt.figure(2)

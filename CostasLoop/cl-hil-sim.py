@@ -1,17 +1,27 @@
 import os
+import sys
+sys.path.append('../')
 import time
+from time import sleep
 import math
+import serial
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal
 import commpy.filters as filter
 from threading import Thread
+from fxpmath import Fxp
 
+sqnr_log = []
 print(time.ctime())
 ITERATIONS = 100
 base_signal = [0] * ITERATIONS
 fixed_signal = [0] * ITERATIONS
 snr_log = [0] * ITERATIONS
+
+sps = 4 #samples per symbol
+fsamples = 1 # assume our sample rate is 1 Hz
+Tsample = 1/fsamples # calc sample period
+Tsymbol = Tsample*sps
 
 def sqnr(signal: np.array, quantized_signal: np.array) -> float: 
         quant_err = signal - quantized_signal
@@ -19,12 +29,6 @@ def sqnr(signal: np.array, quantized_signal: np.array) -> float:
         p_signal = float(np.sum(np.abs(signal) ** 2)) / len(signal)
         sqnr = 10*np.log10(p_signal/p_noise)
         return sqnr
-
-samples_from_bsv = 450
-sps = 4 #samples per symbol
-fsamples = 1 # assume our sample rate is 1 Hz
-Tsample = 1/fsamples # calc sample period
-Tsymbol = Tsample*sps
 
 def gen_signal():
     num_symbols = int(10*8*fsamples)
@@ -80,7 +84,7 @@ def perform_estimation_n_fix(rx_signal: np.array):
         conj = (rx * last_rx.conjugate())
         err_ += conj
         #print("coarseFreq.addSample(cmplx({:.6f}".format(rx.real), ",", "{:.6f}));".format(rx.imag))
-        if sum > 8*sps:
+        if sum > 24*sps:
             #print(((sps/2)/(np.pi*Tsymbol)))
             fserror = ((sps/2)/(np.pi*Tsymbol)) * math.atan2(err_.imag, err_.real)
         last_rx = rx
@@ -111,7 +115,7 @@ def mmted(rx_signal_downsampled: np.array):
         #out[i_out] = samples_interpolated[i_in*16 + int(mu*16)]
         out_rail[i_out] = int(np.real(out[i_out]) > 0) + 1j*int(np.imag(out[i_out]) > 0)
         x = (out_rail[i_out] - out_rail[i_out-2]) * np.conj(out[i_out-1])
-        y = (out[i_out] - out[i_out-2])           * np.conj(out_rail[i_out-1])
+        y = (out[i_out] - out[i_out-2]) * np.conj(out_rail[i_out-1])
         mm_val = np.real(y - x)
         mu += sps + 0.3*mm_val
         i_in += int(np.floor(mu)) # round down to nearest int since we are using it as an index
@@ -122,99 +126,108 @@ def mmted(rx_signal_downsampled: np.array):
 
 ###################################################################################
 
-def simulation_step(x_limiter: int, y_limiter: int, mu_limiter: int,
-                    out_limiter: int, mm_limiter:int,
-                    rx_signal: np.array, reference_signal: np.array,
-                    log: list, log_index: int):
-
-    #print values to run bittrue simulation on bsv
-    in_file_name = "/tmp/mmted-sim-"+str(log_index)+"-py.log"
-    out_file_name = "/tmp/mmted-sim-"+str(log_index)+"-bsv.log"
+def costas_loop(time_synched_signal: np.array):
     
-    f = open(in_file_name, "w")
-    print(f'{x_limiter}.0, {y_limiter}.0, {mu_limiter}.0, {out_limiter}.0, {mm_limiter}.0', 
-          file = f)
-    for datum in rx_signal:
-        print("{:.6f}".format(datum.real), 
-            ",", 
-            "{:.6f}".format(datum.imag),
-            file = f)
-    f.close()
+    N = len(time_synched_signal)
+    phase = 0
+    freq = 0
+    # These next two params is what to adjust, to make the feedback loop faster or slower (which impacts stability)
+    alpha = 0.132
+    beta = 0.00932
+    #alpha = 1.0
+    #beta = 1.0
+    out = np.zeros(N, dtype=complex)
+    for i in range(N):
+        out[i] = time_synched_signal[i] * np.exp(-1j*phase) # adjust the input sample by the inverse of the estimated phase offset
+        error = np.real(out[i]) * np.imag(out[i]) # This is the error formula for 2nd order Costas Loop (e.g. for BPSK)
+        #error = phase_detector_4(out[i])
+        # Advance the loop (recalc phase and freq offset)
+        freq += (beta * error)
+        phase += freq + (alpha * error)
+        # Optional: Adjust phase so its always between 0 and 2pi, recall that phase wraps around every 2pi
+        while phase > np.pi/2:
+            phase -= np.pi/2
+        while phase < -np.pi/2:
+            phase += np.pi/2
+    return out
 
-
-    os.system("./mmTED.exe < " + in_file_name + " > " + out_file_name)
-
-
-    #read values from bittrue simulation
+###########################################################################################################
+        
+def simulation_step(limiters: list, rx_signal: np.array, reference_signal: np.array,
+                    log: list, log_index: int):
+ 
+    DATA        = Fxp(None, True, 24, 16)
+    hil_flp = list()
     index = 0
-    corrected_bsv = np.zeros(500, dtype=complex)
-    bsv_file = open(out_file_name, "r")
-    for line in bsv_file:
-        number = line.split(",")
-        cmplx = complex(float(number[0]), float(number[1]))
-        corrected_bsv[index] = cmplx
-        index += 1
-    bsv_file.close()
-    #compare to python values
-    index = min(len(reference_signal), index)
+    BAUDRATE = 9600
+    ser = serial.Serial('/dev/ttyUSB1', baudrate=BAUDRATE, timeout = 1)
+    print(ser.read_all())
+    ser.close()
+    ser = serial.Serial('/dev/ttyUSB1', baudrate=BAUDRATE, timeout = 1)
+    print(ser.read_all())
+    for b in bytes(limiters):    
+        ser.write(b)
+        sleep(0.01)
+    recv_ba = bytearray()
+    sent_ba = bytearray()
+    ser.read_all()
+    for datum in rx_signal:
+        fxp = Fxp(datum.real).like(DATA)
+        sent_ba += bytes.fromhex(fxp.hex()[2:])
+        fxp = Fxp(datum.imag).like(DATA)
+        sent_ba += bytes.fromhex(fxp.hex()[2:])
+    
+    m = 0
+    for bx in sent_ba:
+        ser.write(bx)
+        print(bx)
+        sleep(0.01)
+        if(m % 6 == 5): 
+            b = ser.read_all()
+            print(b)
+            recv_ba += b
+        m += 1
 
-    reference_signal= np.resize(reference_signal, index)
-    corrected_bsv = np.resize(corrected_bsv,index)
+    for n in range(0, len(recv_ba), 6):
+        fxp_raw = recv_ba[n:n+3]
+        print("0x"+fxp_raw.hex())
+        fxp_real = Fxp("0x"+fxp_raw.hex(), True, 24, 16)
+        fxp_raw = recv_ba[n+3:n+6]
+        print("0x"+fxp_raw.hex())
+        fxp_imag = Fxp("0x"+fxp_raw.hex(), True, 24, 16)
+        print(fxp_real, fxp_imag)
+        hil_flp.append(complex(fxp_real.astype(float), fxp_imag.astype(float)))
+        index += 1
+    corrected_bsv = np.array(hil_flp)
+    reference_signal = np.resize(reference_signal,index)
     log[log_index] = sqnr(reference_signal, corrected_bsv)
-   
-    plt.figure("M&M TED - Python to optimal comparison")
+    
+    plt.title("Costas Loop - Python to optimal comparison")
     plt.subplot(2, 1, 1)
-    plt.title("M&M TED - Python to optimal comparison")
-    plt.legend("python")
-    plt.plot(reference_signal.real[0:index-1], '.-')
-    plt.plot(reference_signal.imag[0:index-1],'.-')
+    plt.plot(reference_signal.real, '.-')
+    plt.plot(reference_signal.imag,'.-')
+    #plt.figure(4)
     plt.subplot(2, 1, 2)
-    plt.legend("optimal")
-    plt.plot(corrected_bsv.real[0:index-1],'.-') 
-    plt.plot(corrected_bsv.imag[0:index-1], '.-')
+    plt.plot(corrected_bsv.real,'.-') 
+    plt.plot(corrected_bsv.imag, '.-')
     plt.show()
 
-def threaded_simulations(x: int, y:int, mu:int, out:int, mm:int):
+def threaded_simulations(limiters: list):
     threads = [None] * ITERATIONS
     for n in range(ITERATIONS):
         threads[n] = Thread(target=simulation_step, 
-                args=(x, y, mu, out, mm, base_signal[n], fixed_signal[n], snr_log, n))
+                args=(limiters, base_signal[n], fixed_signal[n], snr_log, n))
         threads[n].start()
     for n in range(ITERATIONS):
         threads[n].join()
 
 for i in range(ITERATIONS):
-    base_signal[i]  =  perform_estimation_n_fix(gen_signal())
-    fixed_signal[i] =  mmted(base_signal[i])
-
-def full_simulation():
-    for x in range(6,7):
-        for y in range (6,7):
-            for mu in range(4,5):
-                for out in range (6,7):
-                    for mm in range (6,7):
-                        threaded_simulations(x, y, mu, out, mm)
-                        log = np.array(snr_log)
-                        print("mean:", "{:.3f}".format(log.mean()), 
-                                "std:", "{:.3f}".format(log.std()),
-                                "min:", "{:.3f}".format(log.min()),
-                                "WL:", x, y, mu, out, mm)
-
-def one_sim_batch():
-    threaded_simulations(6,6,6,6,6)
-    log = np.array(snr_log)
-    print("mean:", "{:.3f}".format(log.mean()), "std:", "{:.3f}".format(log.std()), "min:", "{:.3f}".format(log.min()))
-
-def one_sim_graph():
-    for i in range(ITERATIONS):
-        simulation_step(0, 0, 0, 0, 0, base_signal[i], fixed_signal[i], snr_log, i)
-        #print("sqnr:", "{:.3f}".format(snr_log[i]))
-    log = np.array(snr_log)
-    print("mean:", "{:.3f}".format(log.mean()), "std:", "{:.3f}".format(log.std()), "min:", "{:.3f}".format(log.min()))
+    base_signal[i]  =  mmted(perform_estimation_n_fix(gen_signal()))
+    fixed_signal[i] =  costas_loop(base_signal[i])
 
 
-#one_sim_batch()
-simulation_step(12, 12, 12, 12, 12, base_signal[0], fixed_signal[0], snr_log, 0)
+limiters = [0,0,0,0,0,0,0,0]
+simulation_step(limiters, base_signal[0], fixed_signal[0], snr_log, 0)
+print("sqnr:", "{:.3f}".format(snr_log[0]))
 
-#full_simulation()
 print(time.ctime())
